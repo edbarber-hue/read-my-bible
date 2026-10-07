@@ -1,0 +1,511 @@
+// Read My Bible · Kids Quest — reading rules, profiles, wardrobe, and home.
+const $ = s => document.querySelector(s);
+const STORE = 'matthew-quest-v1';
+const MASTER_CODE = '7777';
+const pad = n => String(n).padStart(2, '0');
+const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const todayKey = () => dateKey(new Date());
+function addDays(key, n) { const d = new Date(`${key}T12:00:00`); d.setDate(d.getDate() + n); return dateKey(d); }
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+let state = loadState(), currentId = state.currentId;
+let quiz = null;            // {mode:'daily'|'review', chapter, chapters, questions, index, score, runId, picked, advancing}
+let readingChapter = 1, passageText = '';
+const narration = { active: false, token: 0, audio: null, timer: null };
+const testView = { homeStage: null };   // master-mode preview only, never saved
+
+function loadState() { try { const x = JSON.parse(localStorage.getItem(STORE)); if (x && Array.isArray(x.profiles)) return x; } catch { } return { profiles: [], currentId: null }; }
+function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { toast('Could not save on this device'); } }
+const isMaster = () => state.master === true;
+
+// ---------- Profiles ----------
+function profile() {
+  const p = state.profiles.find(x => x.id === currentId) || null;
+  if (!p) return null;
+  p.gender = ['girl', 'female', 'woman'].includes(p.gender) ? 'girl' : 'boy';
+  p.dailyPass = p.dailyPass || {};
+  p.completed = Array.isArray(p.completed) ? p.completed : [];
+  p.skin = Number.isInteger(p.skin) && p.skin >= 0 && p.skin < SKINS.length ? p.skin : 2;
+  p.hair = Number.isInteger(p.hair) && p.hair >= 0 && p.hair < 5 ? p.hair : 0;
+  p.hairColor = Number.isInteger(p.hairColor) && p.hairColor >= 0 && p.hairColor < 3 ? p.hairColor : 0;
+  p.homeStage = Math.min(3, Number(p.homeStage || 0));
+  p.decor = p.decor || {};
+  p.outdoorDecor = p.outdoorDecor || {};
+  if (!p.v2) { // one-time clean-up of retired features (coins, eye colour, voices, suit colours, powers)
+    ['coins', 'eyes', 'voiceAccent', 'suitColor', 'color', 'expression', 'expressions', 'totalPages'].forEach(k => delete p[k]);
+    if (p.equipped) delete p.equipped.power;
+    p.v2 = 1; save();
+  }
+  return p;
+}
+function firstName(p) { return p.name.trim().split(/\s+/)[0]; }
+const completed = (p, n) => p.completed.includes(n);
+const SKINS = ['#d9a983', '#ca9670', '#bb835d', '#ad7352', '#9e6446'];
+
+// ---------- Reading rules: one chapter a day, in order, every day ----------
+function nextChapter(p) {
+  for (let n = 1; n <= 28; n++) if (!completed(p, n)) return n;
+  return ((p.rereadCount || 0) % 28) + 1;                    // after Matthew 28: reread from the start
+}
+function todayChapter(p) {
+  const key = todayKey();
+  if (p.today?.date === key) return p.today.chapter;
+  p.today = { date: key, chapter: nextChapter(p) }; save();
+  return p.today.chapter;
+}
+const passedToday = p => p.dailyPass[todayKey()] != null;
+const canPlay = p => isMaster() || passedToday(p);
+const rereading = p => p.completed.length >= 28;
+function streak(p) {
+  let day = todayKey(), count = 0;
+  if (p.dailyPass[day] == null) day = addDays(day, -1);        // today not done yet: streak is still alive from yesterday
+  while (p.dailyPass[day] != null) { count++; day = addDays(day, -1); }
+  return count;
+}
+
+// ---------- Wardrobe ----------
+function wardrobe(p) {
+  if (!p.cosmetics) {
+    const hats = { 2: 'aviator-goggles', 6: 'sun-cap', 10: 'moon-helmet', 14: 'gold-crown', 18: 'star-visor', 22: 'winged-helmet', 26: 'winged-helmet' }, outfits = { 0: 'coral-scout', 4: 'sky-pilot', 8: 'forest-ranger', 12: 'royal-adventurer', 16: 'golden-guardian', 20: 'sunset-surfer', 24: 'night-explorer' }, trails = { 1: 'star-dust', 5: 'cloud-puffs', 9: 'star-dust', 13: 'sky-bolt', 17: 'heart-sparks', 21: 'page-flutter', 25: 'star-dust' };
+    p.cosmetics = { accessory: hats[p.equipped?.hat] || null, trail: trails[p.equipped?.trail] || null, jetpack: completed(p, 3) ? 'classic-pack' : null, outfit: outfits[p.equipped?.outfit] || null };
+    p.legacyCosmetics = Object.values(p.cosmetics).filter(Boolean); save();
+  }
+  const swap = { 'rainbow-band': 'sunburst-band', 'rainbow-ribbon': 'sky-bolt' };
+  if (swap[p.cosmetics.accessory] || swap[p.cosmetics.trail]) {
+    for (const k of ['accessory', 'trail']) if (swap[p.cosmetics[k]]) p.cosmetics[k] = swap[p.cosmetics[k]];
+    p.legacyCosmetics = (p.legacyCosmetics || []).map(id => swap[id] || id); save();
+  }
+  return p.cosmetics;
+}
+const cosmeticUnlocked = (p, item) => isMaster() || completed(p, item.chapter) || !!p.legacyCosmetics?.includes(item.id);
+const equippedCosmetic = (p, type) => cosmeticById(wardrobe(p)[type]);
+
+// ---------- Character art ----------
+function explorerMarkup(p, preview = null, forceBase = false) {
+  // Home and previews show the explorer in their outfit with their own hairstyle (hats/jetpacks/trails show in Sky Run and the wardrobe).
+  const item = forceBase ? null : preview || equippedCosmetic(p, 'outfit'), acc = forceBase ? null : equippedCosmetic(p, 'accessory');
+  const src = variantPath(p.gender, item, p.hair);
+  return `<div class="explorer-figure"><div class="explorer-still" data-character-sheet data-gender="${p.gender}" data-item="${item?.id || ''}" data-acc="${acc?.id || ''}" data-hair="${p.hair}" data-hair-color="${p.hairColor}" data-skin="${p.skin}" role="img" aria-label="${escapeHtml(p.name)} the explorer" style="background-image:url('${src}')"></div></div>`;
+}
+function turntableMarkup(item, p) {
+  const src = variantPath(p.gender, item, p.hair);
+  return `<div class="turntable" data-turntable="${item.id}"><div class="turntable-frame" data-character-sheet data-gender="${p.gender}" data-item="${item.id}" data-hair="${p.hair}" data-hair-color="${p.hairColor}" data-skin="${p.skin}" role="img" aria-label="${escapeHtml(item.name)}, front view" style="background-image:url('${src}')"></div><div class="turntable-controls"><button type="button" data-spin="-1" aria-label="Turn left">↶</button><span class="turntable-angle">Front</span><button type="button" data-spin="1" aria-label="Turn right">↷</button></div><small>Drag to spin · 8 angles</small></div>`;
+}
+function hydrateCharacterArt() {
+  document.querySelectorAll('[data-character-sheet]').forEach(el => {
+    const d = el.dataset, key = [d.gender, d.item, d.acc, d.hair, d.hairColor, d.skin].join('|');
+    if (d.hydratedKey === key) return; d.hydratedKey = key;
+    characterSheet(d.gender, cosmeticById(d.item), Number(d.hair), Number(d.skin), Number(d.hairColor), d.acc || '')
+      .then(src => { if (el.isConnected && el.dataset.hydratedKey === key) el.style.backgroundImage = `url('${src}')`; }).catch(() => { });
+  });
+}
+new MutationObserver(hydrateCharacterArt).observe(document.body, { childList: true, subtree: true });
+function setupTurntable() {
+  const wrap = $('#modalCard').querySelector('[data-turntable]'); if (!wrap) return;
+  const frame = wrap.querySelector('.turntable-frame'), label = wrap.querySelector('.turntable-angle'), names = ['Front', 'Front right', 'Right side', 'Back right', 'Back', 'Back left', 'Left side', 'Front left'];
+  let angle = 0, startX = null;
+  const set = n => { angle = (n + 8) % 8; frame.style.backgroundPosition = `${angle % 4 * 100 / 3}% ${angle < 4 ? 0 : 100}%`; label.textContent = names[angle]; };
+  wrap.querySelectorAll('[data-spin]').forEach(b => b.onclick = () => set(angle + Number(b.dataset.spin)));
+  frame.addEventListener('pointerdown', e => { startX = e.clientX; frame.setPointerCapture(e.pointerId); });
+  frame.addEventListener('pointermove', e => { if (startX == null) return; const steps = Math.trunc((e.clientX - startX) / 22); if (steps) { set(angle + steps); startX += steps * 22; } });
+  ['pointerup', 'pointercancel'].forEach(t => frame.addEventListener(t, () => startX = null));
+  set(0);
+}
+
+// ---------- Modal + toast ----------
+function openModal(html) { $('#modalCard').innerHTML = html; $('#modalLayer').classList.remove('hidden'); $('#modalCard').scrollTop = 0; $('#modalCard').querySelector('[data-close]')?.addEventListener('click', closeModal); }
+function closeModal() { $('#modalLayer').classList.add('hidden'); stopNarration(); }
+const header = (kicker, title) => `<div class="modal-head"><div><div class="eyebrow">${kicker}</div><h2>${title}</h2></div><button class="icon-button" data-close aria-label="Close">×</button></div>`;
+function toast(msg) { const n = document.createElement('div'); n.className = 'toast'; n.textContent = msg; document.body.append(n); setTimeout(() => n.remove(), 2800); }
+
+// ---------- Dashboard ----------
+function render() {
+  const p = profile();
+  ['#dashboard', '#homeBase', '#outfitSection'].forEach(s => $(s).classList.toggle('hidden', !p));
+  $('#hero').classList.toggle('hidden', !!p);
+  $('#testBadge').classList.toggle('hidden', !isMaster());
+  $('#activeProfileLabel').textContent = p ? `${p.name} · age ${p.age}` : 'No explorer selected';
+  $('#primaryButton').textContent = p ? 'Continue adventure' : 'Choose an explorer';
+  if (!p) return;
+  const n = todayChapter(p), little = p.age <= 6, q = QUESTIONS[n - 1], done = passedToday(p);
+  $('#welcomeTitle').textContent = `Ready, ${firstName(p)}?`;
+
+  // Streak
+  const s = streak(p);
+  $('#streakNumber').textContent = s;
+  $('#streakUnit').textContent = s === 1 ? 'day' : 'days';
+  $('#streakBar').style.width = `${Math.min(28, s) / 28 * 100}%`;
+  $('.streak-card').classList.toggle('lit', s > 0);
+  $('#streakText').textContent = s >= 28 ? '28-day champion! Keep the fire going!' : s === 0 ? 'Read today to light your fire!' : done ? `Day ${s} of 28 · see you tomorrow!` : `Day ${s} of 28 · read today to keep it going!`;
+
+  // Today
+  $('#todayTitle').textContent = `Matthew ${n}${little ? `:${q.verse}` : ''}`;
+  if (done) {
+    const next = nextChapter(p);
+    $('#todayDescription').textContent = `Great job! Come back tomorrow to read your Bible again${rereading(p) && p.completed.length === 28 && next === 1 ? '' : ` — Matthew ${next} is next`}.`;
+    $('#readTodayButton').textContent = 'Come back tomorrow';
+    $('#readTodayButton').disabled = !isMaster();
+  } else {
+    $('#todayDescription').textContent = `${little ? 'Today’s verse' : 'Today’s chapter'}: ${q.title}. ${rereading(p) ? 'You finished Matthew — reading it again helps you notice new things!' : 'Read it and get 3 of 3 quiz answers right to fly.'}`;
+    $('#readTodayButton').textContent = 'Read my Bible';
+    $('#readTodayButton').disabled = false;
+  }
+  // Play
+  const ready = canPlay(p);
+  $('#gameStatus').textContent = ready ? 'The sky is yours!' : 'The sky is waiting';
+  $('#gameDescription').textContent = ready ? 'Fly as many times as you like today!' : 'Finish today’s reading and quiz to unlock your run.';
+  $('#playButton').disabled = !ready;
+  $('#playButton').textContent = ready ? 'Play Sky Run' : 'Read first to play';
+  // Character
+  $('#characterPreview').innerHTML = explorerMarkup(p);
+  renderLoadout(p);
+  renderHome(p);
+  drawPlayPreview(p);
+  if (p.completed.length === 28 && !p.congratsShown) { p.congratsShown = true; save(); setTimeout(showCongratulations, 400); }
+}
+function renderLoadout(p) {
+  const box = $('#homeLoadout');
+  box.innerHTML = ['outfit', 'accessory', 'jetpack', 'trail'].map(type => {
+    const item = equippedCosmetic(p, type), owned = COSMETICS.filter(c => c.type === type && cosmeticUnlocked(p, c)).length, total = COSMETICS.filter(c => c.type === type).length;
+    return `<button class="home-loadout-item" data-loadout="${type}"><span class="home-loadout-art">${item ? cosmeticArt(item) : ''}</span><span><small>${COSMETIC_LABELS[type]} · ${owned}/${total}</small><b>${item ? item.name : 'Choose a look'}</b></span></button>`;
+  }).join('');
+  box.querySelectorAll('[data-loadout]').forEach(b => b.onclick = () => showRewards(b.dataset.loadout));
+}
+function showCongratulations() {
+  openModal(`${header('YOU DID IT', 'Matthew complete!')}<p>You read all 28 chapters of Matthew. What an adventure! Reading it again helps you notice something new every time, so tomorrow you’ll start again at Matthew 1. Keep your streak going!</p><div class="notice">Every reading reward is now unlocked for this explorer.</div><button id="congratsDone" class="button primary wide">Keep exploring</button>`);
+  $('#congratsDone').onclick = closeModal;
+}
+
+// ---------- Profiles modal ----------
+function showProfiles() {
+  const rows = state.profiles.map(p => `<div class="profile-row"><span class="profile-avatar ${p.gender === 'girl' ? 'girl' : 'boy'}"></span><div style="flex:1"><b>${escapeHtml(p.name)}</b><small>Age ${p.age} · ${p.completed?.length || 0}/28 chapters</small></div><button class="button small ${p.id === currentId ? 'dark' : 'secondary'}" data-select="${p.id}">${p.id === currentId ? 'Selected' : 'Choose'}</button></div>`).join('');
+  openModal(`${header('EXPLORERS', 'Choose your explorer')}<p>Each child has their own reading progress, rewards, and saved explorer on this device.</p><div class="profile-list">${rows || '<div class="notice">Create the first explorer to begin.</div>'}</div><div class="two-col"><label class="field">Explorer name<input id="newName" maxlength="22" placeholder="Name"></label><label class="field">Age<select id="newAge">${Array.from({ length: 9 }, (_, i) => `<option value="${i + 4}">${i + 4} years old</option>`).join('')}</select></label></div><fieldset class="gender-choice"><legend>Boy or girl?</legend><label><input type="radio" name="newGender" value="boy" checked> Boy</label><label><input type="radio" name="newGender" value="girl"> Girl</label><small>This can’t be changed later.</small></fieldset><button id="createProfile" class="button primary wide">Create explorer</button><button id="transferButton" class="text-button" style="width:100%">Move a save to another device →</button>`);
+  $('#createProfile').onclick = () => {
+    const name = $('#newName').value.trim(), age = Number($('#newAge').value), gender = $('#modalCard input[name="newGender"]:checked')?.value || 'boy';
+    if (!name) { toast('Enter a name first'); return; }
+    if (state.profiles.some(p => p.name.toLowerCase() === name.toLowerCase())) { toast('That name is already in use here'); return; }
+    const p = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), name, age, gender, startDate: todayKey(), completed: [], dailyPass: {}, homeStage: 0, skin: 2, hair: 0, hairColor: 0, decor: {}, outdoorDecor: {}, cosmetics: { accessory: null, trail: null, jetpack: null, outfit: null }, best: 0, totalStars: 0, congratsShown: false, v2: 1 };
+    state.profiles.push(p); currentId = state.currentId = p.id; save(); closeModal(); render(); toast(`Welcome, ${name}!`);
+  };
+  $('#transferButton').onclick = showTransfer;
+  $('#modalCard').querySelectorAll('[data-select]').forEach(b => b.onclick = () => { currentId = state.currentId = b.dataset.select; save(); closeModal(); render(); });
+}
+function showTransfer() {
+  const p = profile(); let code = '';
+  if (p) code = btoa(unescape(encodeURIComponent(JSON.stringify({ ...p, exportVersion: 1 }))));
+  openModal(`${header('SAVE TRANSFER', 'Move between devices')}<p>Progress saves automatically on this device. To move an explorer to another phone or laptop, copy their transfer code and import it there. Later changes won’t sync automatically.</p>${p ? `<label class="field">${escapeHtml(p.name)}’s transfer code<textarea id="exportCode" rows="4" readonly>${code}</textarea></label><button id="copyCode" class="button secondary">Copy code</button>` : ''}<label class="field">Import an explorer’s transfer code<textarea id="importCode" rows="4" placeholder="Paste a transfer code here"></textarea></label><button id="importButton" class="button primary">Import explorer</button>`);
+  $('#copyCode')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(code); } catch { $('#exportCode').select(); document.execCommand('copy'); } toast('Transfer code copied'); });
+  $('#importButton').onclick = () => {
+    try {
+      const imp = JSON.parse(decodeURIComponent(escape(atob($('#importCode').value.trim()))));
+      if (imp.exportVersion !== 1 || !imp.name || !Array.isArray(imp.completed) || imp.age < 4 || imp.age > 12) throw Error();
+      delete imp.exportVersion;
+      imp.id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+      imp.name = String(imp.name).slice(0, 22);
+      imp.completed = [...new Set(imp.completed.filter(n => Number.isInteger(n) && n >= 1 && n <= 28))];
+      imp.dailyPass = imp.dailyPass && typeof imp.dailyPass === 'object' ? imp.dailyPass : {};   // keeps the streak when moving devices
+      if (state.profiles.some(p => p.name.toLowerCase() === imp.name.toLowerCase())) imp.name += ' (imported)';
+      state.profiles.push(imp); currentId = state.currentId = imp.id; save(); closeModal(); render(); toast('Explorer imported');
+    } catch { toast('That transfer code could not be read'); }
+  };
+}
+function showHow() {
+  openModal(`${header('HOW TO PLAY', 'Read • Answer • Fly')}<div class="chapter-row"><b>1. Read every day</b><small>One chapter of Matthew a day, in order. Ages 4–6 read one special verse; ages 7–12 read the whole chapter.</small></div><br><div class="chapter-row"><b>2. Answer three questions</b><small>Get all three right. You can try again as many times as you need.</small></div><br><div class="chapter-row"><b>3. Fly in Sky Run</b><small>Hold to rise, let go to fall. Dodge gears and zappers, catch stars, and grab glowing Bibles to throw pages.</small></div><br><div class="chapter-row"><b>4. Unlock and grow</b><small>Every chapter unlocks a new look. Every 3 chapters fills your home bar — pass the home quiz to move up from tent to trailer, house, and mansion.</small></div><br><div class="chapter-row"><b>5. Keep your streak</b><small>Read every day, weekends too, to keep your fire burning. Miss a day and the streak starts again.</small></div>`);
+}
+function showChapters() {
+  const p = profile(); if (!p) { showProfiles(); return; }
+  const today = todayChapter(p), master = isMaster();
+  openModal(`${header('MY READING MAP', 'Matthew 1–28')}<p>One chapter a day. Finished chapters get a check mark; today’s chapter glows gold.${master ? ' <b>Test mode:</b> tap any chapter to open it.' : ''}</p><div class="chapter-grid">${QUESTIONS.map((q, i) => { const n = i + 1, done = completed(p, n), isToday = n === today; return `<button class="chapter-tile ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${!done && !isToday ? 'locked' : ''}" data-chapter="${n}" ${master ? '' : 'disabled'}>MAT ${n}<small>${done ? '✓ Read' : isToday ? 'Today' : 'Coming soon'}</small></button>`; }).join('')}</div><button id="viewRewards" class="button secondary wide">See my wardrobe</button>`);
+  if (master) $('#modalCard').querySelectorAll('[data-chapter]').forEach(b => b.onclick = () => showReading(Number(b.dataset.chapter)));
+  $('#viewRewards').onclick = () => showRewards();
+}
+
+// ---------- Reading ----------
+const netPassage = (n, p) => p.age <= 6 ? `Matthew ${n}:${QUESTIONS[n - 1].verse}` : `Matthew ${n}`;
+function loadNet(reference) {
+  return new Promise((resolve, reject) => {
+    const cb = `netCallback_${Date.now()}_${Math.floor(Math.random() * 10000)}`, script = document.createElement('script'); let done = false, timer;
+    const finish = (err, val) => { if (done) return; done = true; clearTimeout(timer); script.remove(); delete window[cb]; err ? reject(err) : resolve(val); };
+    window[cb] = data => finish(null, data);
+    script.onerror = () => finish(Error('NET service unavailable'));
+    script.src = `https://labs.bible.org/api/?passage=${encodeURIComponent(reference)}&type=json&formatting=plain&callback=${cb}`;
+    timer = setTimeout(() => finish(Error('NET service timeout')), 12000);
+    document.head.append(script);
+  });
+}
+async function getPassage(n, p) {
+  // Bundled text first (works offline and doesn't depend on the NET website), then the NET service.
+  if (window.NET_MATTHEW?.[n]) {
+    const verses = window.NET_MATTHEW[n];
+    return p.age <= 6 ? verses.filter(v => v[0] === QUESTIONS[n - 1].verse) : verses;
+  }
+  const data = await loadNet(netPassage(n, p));
+  const list = Array.isArray(data) ? data : Array.isArray(data?.verses) ? data.verses : [];
+  if (!list.length) throw Error('No passage');
+  return list.map(v => [Number(v.verse), String(v.text || '').replace(/<[^>]*>/g, '').trim()]);
+}
+function stopNarration() {
+  narration.token++; narration.active = false;
+  if (narration.timer) { clearTimeout(narration.timer); narration.timer = null; }
+  if (narration.audio) { narration.audio.pause(); narration.audio = null; }
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  const b = $('#listenButton'); if (b) b.textContent = '▶ Read aloud';
+}
+function audioFor(n, p) { const a = window.AUDIO_FILES; if (!a) return null; return p.age <= 6 ? a.verse?.[n] : a.chapter?.[n]; }
+function playAudioFile(src, button) {
+  const token = ++narration.token; narration.active = true; button.textContent = '■ Stop';
+  const a = new Audio(src); narration.audio = a;
+  a.onended = () => { if (token === narration.token) { narration.active = false; button.textContent = '▶ Read aloud'; } };
+  a.onerror = () => { if (token === narration.token) { narration.active = false; button.textContent = '▶ Read aloud'; toast('The recording could not play'); } };
+  a.play().catch(() => { narration.active = false; button.textContent = '▶ Read aloud'; });
+}
+function bestDeviceVoice() {
+  const voices = speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang));
+  const rank = v => { const n = v.name.toLowerCase(); if (/premium|enhanced|natural|neural/.test(n)) return 0; if (/samantha|ava|allison|google us|google uk|daniel|serena|karen/.test(n)) return 1; return /^en-us/i.test(v.lang) ? 2 : 3; };
+  return voices.sort((a, b) => rank(a) - rank(b))[0] || null;
+}
+function playDeviceVoice(text, age, button) {
+  if (!('speechSynthesis' in window)) { toast('Read aloud is not available in this browser'); return; }
+  const token = ++narration.token; narration.active = true; button.textContent = '■ Stop';
+  const parts = text.replace(/\s+/g, ' ').match(/[^.!?;]+[.!?;]+["”’]?|[^.!?;]+$/g) || [text], voice = bestDeviceVoice(); let i = 0;
+  const next = () => {
+    if (token !== narration.token) return;
+    if (i >= parts.length) { narration.active = false; button.textContent = '▶ Read aloud'; return; }
+    const u = new SpeechSynthesisUtterance(parts[i++].trim()); u.lang = voice?.lang || 'en-US'; if (voice) u.voice = voice;
+    u.rate = age <= 6 ? .86 : .93; u.pitch = 1;
+    u.onend = () => { narration.timer = setTimeout(next, 120); };
+    u.onerror = () => { narration.active = false; button.textContent = '▶ Read aloud'; };
+    speechSynthesis.speak(u);
+  };
+  next();
+}
+async function showReading(n) {
+  const p = profile(); if (!p) return;
+  if (!isMaster() && (n !== todayChapter(p) || passedToday(p))) { toast(passedToday(p) ? 'Come back tomorrow to read your Bible again!' : 'Read today’s chapter first'); return; }
+  stopNarration(); readingChapter = n; passageText = '';
+  const ref = netPassage(n, p);
+  openModal(`${header('READ YOUR BIBLE', escapeHtml(ref))}<p>${escapeHtml(QUESTIONS[n - 1].title)} · (<a href="https://netbible.org" target="_blank" rel="noopener">NET</a>)</p><div id="passageBox" class="passage-box">Loading…</div><div class="passage-actions"><button id="listenButton" class="button secondary" disabled>▶ Read aloud</button></div><div class="notice">Read to the end, then answer three questions. A grown-up can help younger readers.</div><button id="quizButton" class="button primary wide" disabled>Read to the end to start the quiz</button>${isMaster() ? '<button id="skipQuiz" class="button ghost wide test-button">Test mode: skip quiz and pass</button>' : ''}`);
+  $('#quizButton').onclick = () => startQuiz({ mode: 'daily', chapter: n });
+  $('#skipQuiz')?.addEventListener('click', () => { quiz = { mode: 'daily', chapter: n, score: 3 }; finishQuiz(); });
+  try {
+    const verses = await getPassage(n, p);
+    if (readingChapter !== n || $('#modalLayer').classList.contains('hidden')) return;
+    passageText = verses.map(v => v[1]).join(' ');
+    const box = $('#passageBox');
+    box.innerHTML = verses.map(v => `<p><sup>${v[0]}</sup> ${escapeHtml(v[1])}</p>`).join('');
+    const enable = () => { const b = $('#quizButton'); if (b && b.disabled) { b.disabled = false; b.textContent = 'Start the 3-question quiz'; } };
+    box.onscroll = () => { if (box.scrollTop + box.clientHeight >= box.scrollHeight - 25) enable(); };
+    if (box.scrollHeight <= box.clientHeight + 8) enable();
+    const listen = $('#listenButton'), file = audioFor(n, p);
+    listen.disabled = false;
+    listen.onclick = () => { if (narration.active) { stopNarration(); return; } if (file) playAudioFile(file, listen); else playDeviceVoice(passageText, p.age, listen); };
+  } catch {
+    const box = $('#passageBox'); if (!box) return;
+    box.innerHTML = `The passage could not load right now. <a href="https://netbible.org/bible/Matthew+${n}" target="_blank" rel="noopener">Open Matthew ${n} on the NET Bible site</a>, then come back for the quiz.`;
+    const b = $('#quizButton'); b.disabled = false; b.textContent = 'I read it — start the quiz';
+  }
+}
+
+// ---------- Quizzes (daily + home review) ----------
+const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+const toQuestion = row => ({ prompt: row[0], correct: row[1], answers: shuffle(row.slice(1)) });
+function startQuiz(opts) {
+  stopNarration();
+  const p = profile(), key = p.age <= 6 ? 'little' : 'big';
+  const rows = opts.mode === 'review' ? opts.chapters.map(n => REVIEW[n - 1][key]) : QUESTIONS[opts.chapter - 1][key];
+  quiz = { ...opts, questions: rows.map(toQuestion), index: 0, score: 0, runId: (quiz?.runId || 0) + 1 };
+  renderQuestion();
+}
+function renderQuestion() {
+  const q = quiz.questions[quiz.index], shown = quiz.index, runId = quiz.runId;
+  quiz.picked = -1; quiz.advancing = false;
+  const title = quiz.mode === 'review' ? 'Home quiz' : `Matthew ${quiz.chapter}`;
+  openModal(`${header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', title)}<div class="quiz-top"><span>QUESTION ${shown + 1} OF 3${quiz.mode === 'review' ? ` · MATTHEW ${quiz.chapters[shown]}` : ''}</span><span>${quiz.score} correct so far</span></div><h3 class="quiz-prompt">${escapeHtml(q.prompt)}</h3><div class="quiz-options">${q.answers.map((a, i) => `<button type="button" class="quiz-option" data-answer="${i}">${escapeHtml(a)}</button>`).join('')}</div><p id="quizFeedback" role="status" class="quiz-feedback"></p><button id="nextQuestion" type="button" class="button primary wide" disabled>${shown === 2 ? 'See results' : 'Next question'}</button>`);
+  const advance = () => { if (quiz.advancing || quiz.picked < 0 || quiz.index !== shown || quiz.runId !== runId) return; quiz.advancing = true; if (quiz.index < 2) { quiz.index++; renderQuestion(); } else finishQuiz(); };
+  $('#modalCard').querySelectorAll('[data-answer]').forEach(b => b.onclick = () => {
+    if (quiz.picked >= 0) return;
+    quiz.picked = Number(b.dataset.answer);
+    const right = q.answers[quiz.picked] === q.correct; if (right) quiz.score++;
+    $('#modalCard').querySelectorAll('[data-answer]').forEach(x => { const i = Number(x.dataset.answer); if (q.answers[i] === q.correct) x.classList.add('correct'); else if (i === quiz.picked) x.classList.add('wrong'); x.disabled = true; });
+    $('#quizFeedback').textContent = right ? 'Correct! Moving on…' : `The answer is: ${q.correct}. Moving on…`;
+    $('#nextQuestion').disabled = false; setTimeout(advance, 1200);
+  });
+  $('#nextQuestion').onclick = advance;
+}
+function finishQuiz() {
+  const p = profile();
+  if (quiz.score !== 3) {
+    openModal(`${header('TRY AGAIN', `${quiz.score} of 3 correct`)}<p>You’re learning! ${quiz.mode === 'review' ? 'Think back on those chapters and try again.' : 'Read the passage again and try the three questions again.'} You can retry as many times as you like.</p><div class="two-col">${quiz.mode === 'daily' ? '<button id="rereadButton" class="button secondary">Read again</button>' : ''}<button id="retryButton" class="button primary">Try again</button></div>`);
+    $('#rereadButton')?.addEventListener('click', () => showReading(quiz.chapter));
+    $('#retryButton').onclick = () => startQuiz({ mode: quiz.mode, chapter: quiz.chapter, chapters: quiz.chapters, test: quiz.test });
+    return;
+  }
+  if (quiz.mode === 'review' && quiz.test) { openModal(`${header('TEST MODE', 'Home quiz passed')}<p>In normal play this would upgrade the home. Nothing was saved.</p><button class="button primary wide" data-close>Close</button>`); return; }
+  if (quiz.mode === 'review') return finishHomeQuiz(p);
+  const n = quiz.chapter, isNew = !completed(p, n);
+  if (isNew) p.completed.push(n); else if (rereading(p)) p.rereadCount = (p.rereadCount || 0) + 1;
+  p.dailyPass[todayKey()] = n;
+  const reward = isNew ? COSMETICS.find(item => item.chapter === n) : null;
+  const finished = p.completed.length === 28 && isNew;
+  if (finished) p.congratsShown = true;
+  save(); render();
+  const homeReady = homeQuizReady(p);
+  openModal(`${header(finished ? 'MATTHEW COMPLETE' : 'CHAPTER COMPLETE', finished ? 'You finished Matthew!' : 'Great reading!')}${reward ? `<div class="reward-celebration">${cosmeticArt(reward)}</div><h3 style="text-align:center">Unlocked: ${reward.name}</h3>` : '<h3 style="text-align:center">You remembered it!</h3>'}<p style="text-align:center">${finished ? 'You read all 28 chapters! Tomorrow you’ll start again at Matthew 1 — every reread shows you something new.' : 'All three answers right! Sky Run is open — fly as much as you like today. Come back tomorrow to read your Bible again.'}</p>${homeReady ? '<div class="notice">Your home bar is full! Take the home quiz to upgrade your home.</div>' : ''}<div class="two-col">${reward ? '<button id="rewardNext" class="button secondary">Try it on</button>' : homeReady ? '<button id="homeQuizNext" class="button secondary">Home quiz</button>' : '<button id="closeDone" class="button secondary">Done</button>'}<button id="finishNext" class="button primary">Play Sky Run</button></div>`);
+  $('#rewardNext')?.addEventListener('click', () => showRewards(reward.type, reward.id));
+  $('#homeQuizNext')?.addEventListener('click', startHomeQuiz);
+  $('#closeDone')?.addEventListener('click', closeModal);
+  $('#finishNext').onclick = () => { closeModal(); openGame(); };
+}
+
+// ---------- Home ----------
+const HOME_NAMES = ['Tent', 'Trailer', 'House', 'Mansion'], HOME_CLASSES = ['tent', 'trailer', 'house', 'mansion'];
+const homeStage = p => testView.homeStage ?? p.homeStage;
+const homeProgress = p => Math.max(0, Math.min(3, p.completed.length - p.homeStage * 3));
+const homeQuizReady = p => p.homeStage < 3 && homeProgress(p) >= 3;
+function homeQuizChapters(p) { const sorted = [...p.completed].sort((a, b) => a - b); return sorted.slice(p.homeStage * 3, p.homeStage * 3 + 3); }
+function startHomeQuiz() {
+  const p = profile(); if (!p || !homeQuizReady(p)) return;
+  const chapters = homeQuizChapters(p);
+  openModal(`${header('HOME UPGRADE QUIZ', `Unlock the ${HOME_NAMES[p.homeStage + 1].toLowerCase()}!`)}<p>Three new questions about Matthew ${chapters.join(', ')}. Get all three right to move into your ${HOME_NAMES[p.homeStage + 1].toLowerCase()}${p.homeStage + 1 <= 3 ? ' and get a new car' : ''}.</p><button id="beginHomeQuiz" class="button primary wide">Start the home quiz</button>`);
+  $('#beginHomeQuiz').onclick = () => startQuiz({ mode: 'review', chapters });
+}
+function finishHomeQuiz(p) {
+  p.homeStage = Math.min(3, p.homeStage + 1); p.homeInside = false; save(); render();
+  const name = HOME_NAMES[p.homeStage];
+  openModal(`${header('NEW HOME', `Welcome to your ${name.toLowerCase()}!`)}<div class="home-reveal stage-${HOME_CLASSES[p.homeStage]}"></div><p style="text-align:center">You moved up from the ${HOME_NAMES[p.homeStage - 1].toLowerCase()}! New decorations are ready to place${CARS.length ? ', and a new car is parked outside' : ''}.</p><button id="homeDone" class="button primary wide">See my ${name.toLowerCase()}</button>`);
+  $('#homeDone').onclick = () => { closeModal(); $('#homeBase').scrollIntoView({ behavior: 'smooth' }); };
+}
+// Furniture. Each choice unlocks with the home stage (index 0 = tent, 3 = mansion).
+const DECOR = {
+  couch: { label: 'Sofa', sheet: 'home', row: 2, names: ['Teal sofa', 'Coral sofa', 'Golden sofa', 'Sage sofa'], pos: { x: 24, y: 78 } },
+  tv: { label: 'TV', sheet: 'home', row: 3, names: ['Wooden TV', 'Teal TV', 'Big screen', 'Cream TV'], pos: { x: 77, y: 72 } },
+  bible: { label: 'Bible', sheet: 'bible', names: ['First Bible', 'Explorer Bible', 'Adventure Bible', 'Treasure Bible'], pos: { x: 56, y: 80 } },
+  plate: { label: 'Plate', sheet: 'home', row: 1, names: ['Teal plate', 'Coral plate', 'Flower plate', 'Sage dish'], pos: { x: 42, y: 86 } },
+  food: { label: 'Snack', sheet: 'home', row: 0, names: ['Apple', 'Grapes', 'Bread', 'Cheese'], pos: { x: 42, y: 83 } }
+};
+const OUTDOOR = {
+  garden: { label: 'Garden', row: 0, names: ['Flower bed', 'Leafy planter', 'Veggie garden'], pos: { x: 17, y: 78 } },
+  welcome: { label: 'Porch details', row: 1, names: ['Welcome sign', 'Garden lantern', 'Stepping stones'], pos: { x: 68, y: 74 } },
+  seating: { label: 'Outdoor seating', row: 2, names: ['Teal bench', 'Coral rocker', 'Sunny hammock'], pos: { x: 86, y: 82 } }
+};
+// Cars arrive with each home upgrade (art: cars.png, 3 across). Empty until the art is added.
+const CARS = window.HOME_CARS || [];
+function decorArt(type, index, extra = '') {
+  const d = DECOR[type];
+  if (d.sheet === 'bible') return `<span class="decor-sprite bible-sprite ${extra}" style="--sx:${index % 2 * 100}%;--sy:${Math.floor(index / 2) * 100}%" aria-hidden="true"></span>`;
+  return `<span class="decor-sprite ${extra}" style="--sx:${index * 100 / 3}%;--sy:${d.row * 100 / 3}%" aria-hidden="true"></span>`;
+}
+const outdoorArt = (type, index, extra = '') => `<span class="outdoor-decor-sprite ${extra}" style="--sx:${index * 50}%;--sy:${OUTDOOR[type].row * 50}%" aria-hidden="true"></span>`;
+const carArt = (index, extra = '') => `<span class="car-sprite ${extra}" style="--sx:${index * 50}%" aria-hidden="true"></span>`;
+const decorUnlocked = (p, i) => isMaster() || i <= homeStage(p);
+function renderHome(p) {
+  const stage = homeStage(p), inside = !!p.homeInside, progress = homeProgress(p);
+  $('#homeTitle').textContent = `${firstName(p)}’s ${HOME_NAMES[stage].toLowerCase()}`;
+  $('#homeSubtitle').textContent = stage === 3 ? 'You finished the home journey! Keep reading to keep your streak.' : 'Every 3 chapters fills the bar. Pass the home quiz to move up.';
+  $('#homeLevel').textContent = `${HOME_NAMES[stage].toUpperCase()} · ${stage + 1} OF 4`;
+  const scene = $('#homeScene');
+  scene.className = `home-scene stage-${HOME_CLASSES[stage]}${inside ? ' inside' : ''}`;
+  scene.style.backgroundImage = `url('${inside ? 'home-interiors.webp' : 'home-stages.webp'}')`;
+  scene.style.backgroundSize = '200% 200%';
+  scene.style.backgroundPosition = ['0 0', '100% 0', '0 100%', '100% 100%'][stage];
+  $('#homeViewButton').textContent = inside ? 'Step outside' : 'Step inside';
+  $('#homeCharacter').innerHTML = explorerMarkup(p);
+  const items = inside ? DECOR : OUTDOOR, chosen = inside ? p.decor : p.outdoorDecor, positions = (inside ? p.decorPositions : p.outdoorPositions) || {};
+  let html = Object.keys(items).map(k => {
+    const idx = Math.min(chosen[k] || 0, items[k].names.length - 1), pos = positions[k] || items[k].pos;
+    return `<span class="placed-decor decor-${k} ${inside ? '' : 'outdoor-item'}" data-item="${k}" data-kind="${inside ? 'interior' : 'exterior'}" role="button" tabindex="0" aria-label="Drag to move ${items[k].names[idx]}" style="left:${pos.x}%;top:${pos.y}%;z-index:${Math.round(pos.y)}">${inside ? decorArt(k, idx) : outdoorArt(k, idx)}</span>`;
+  }).join('');
+  if (!inside && CARS.length && stage > 0) {
+    const car = Math.min(p.carChoice ?? stage - 1, stage - 1), pos = positions.car || { x: 82, y: 66 };
+    html += `<span class="placed-decor decor-car outdoor-item" data-item="car" data-kind="exterior" role="button" tabindex="0" aria-label="Drag to move ${CARS[car]}" style="left:${pos.x}%;top:${pos.y}%;z-index:${Math.round(pos.y)}">${carArt(car)}</span>`;
+  }
+  $('#homeDecor').innerHTML = html;
+  $('#homeDecorButton').textContent = inside ? 'Decorate room' : 'Decorate outside';
+  $('#homeProgressTitle').textContent = stage === 3 ? 'Mansion unlocked — journey complete!' : `Next home: ${HOME_NAMES[stage + 1].toLowerCase()}`;
+  $('#homeProgressText').textContent = p.homeStage === 3 ? 'Amazing! Keep reading every day.' : homeQuizReady(p) ? 'Bar full! Pass the home quiz to move up.' : `${progress} of 3 chapters read`;
+  $('#homeProgressBar').style.width = `${(p.homeStage === 3 ? 3 : progress) / 3 * 100}%`;
+  $('#homeQuizButton').classList.toggle('hidden', !homeQuizReady(p));
+}
+function showHomeDecor() {
+  const p = profile(); if (!p) return;
+  const inside = !!p.homeInside, items = inside ? DECOR : OUTDOOR, store = inside ? p.decor : p.outdoorDecor, stage = homeStage(p);
+  const rows = Object.keys(items).map(k => `<div class="decor-row"><b>${items[k].label}</b><div>${items[k].names.map((name, i) => { const ok = decorUnlocked(p, i); return `<button class="decor-choice ${(store[k] || 0) === i ? 'active' : ''}" data-decor="${k}" data-value="${i}" ${ok ? '' : 'disabled'}>${inside ? decorArt(k, i, 'decor-thumbnail') : outdoorArt(k, i, 'decor-thumbnail')}<small>${ok ? name : `🔒 ${HOME_NAMES[i]}`}</small></button>`; }).join('')}</div></div>`).join('');
+  const cars = !inside && CARS.length ? `<div class="decor-row"><b>Car</b><div>${CARS.map((name, i) => { const ok = isMaster() || i < stage; return `<button class="decor-choice ${Math.min(p.carChoice ?? stage - 1, stage - 1) === i ? 'active' : ''}" data-car="${i}" ${ok ? '' : 'disabled'}>${carArt(i, 'decor-thumbnail')}<small>${ok ? name : `🔒 ${HOME_NAMES[i + 1]}`}</small></button>`; }).join('')}</div></div>` : '';
+  openModal(`${header('DECORATE', inside ? 'Your room' : 'Outside your home')}<p>New choices unlock as your home grows. Drag things around in your ${inside ? 'room' : 'yard'} to arrange them — they stay where you put them.</p>${rows}${cars}`);
+  $('#modalCard').querySelectorAll('[data-decor]').forEach(b => b.onclick = () => { store[b.dataset.decor] = Number(b.dataset.value); save(); render(); showHomeDecor(); });
+  $('#modalCard').querySelectorAll('[data-car]').forEach(b => b.onclick = () => { p.carChoice = Number(b.dataset.car); save(); render(); showHomeDecor(); });
+}
+
+// ---------- Wardrobe modal ----------
+function showRewards(type = 'outfit', previewId = null) {
+  const p = profile(); if (!p) { showProfiles(); return; }
+  const item = cosmeticById(previewId), entries = COSMETICS.filter(c => c.type === type), current = item?.type === type ? item : equippedCosmetic(p, type) || entries[0];
+  const equipped = wardrobe(p)[type] === current.id, unlocked = cosmeticUnlocked(p, current);
+  openModal(`${header('YOUR WARDROBE', 'Choose your look')}<p>Every chapter you read unlocks one new look. Tap a look to preview it and spin your explorer around.</p><div class="wardrobe-tabs">${COSMETIC_TYPES.map(t => `<button class="wardrobe-tab ${t === type ? 'active' : ''}" data-tab="${t}">${COSMETIC_LABELS[t]} <small>${COSMETICS.filter(c => c.type === t && cosmeticUnlocked(p, c)).length}/${COSMETICS.filter(c => c.type === t).length}</small></button>`).join('')}</div><div class="wardrobe-preview"><div class="wardrobe-character">${turntableMarkup(current, p)}</div><div class="wardrobe-preview-info"><span class="eyebrow">${COSMETIC_LABELS[type].toUpperCase()}</span><h3>${current.name}</h3><p>${unlocked ? 'Unlocked!' : `Unlocks when you finish Matthew ${current.chapter}.`}</p><button id="equipLook" class="button primary" ${unlocked ? '' : 'disabled'}>${!unlocked ? 'Locked' : equipped ? 'Take it off' : 'Wear this'}</button></div></div><div class="cosmetic-grid">${entries.map(c => `<button class="cosmetic-card ${current.id === c.id ? 'selected' : ''} ${cosmeticUnlocked(p, c) ? '' : 'locked'}" data-preview="${c.id}"><span class="cosmetic-art">${cosmeticArt(c)}</span><b>${c.name}</b><small>${cosmeticUnlocked(p, c) ? wardrobe(p)[type] === c.id ? '✓ Wearing' : 'Unlocked' : `🔒 Matthew ${c.chapter}`}</small></button>`).join('')}</div>`);
+  $('#modalCard').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => showRewards(b.dataset.tab));
+  $('#modalCard').querySelectorAll('[data-preview]').forEach(b => b.onclick = () => showRewards(type, b.dataset.preview));
+  $('#equipLook')?.addEventListener('click', () => {
+    if (!unlocked) return;
+    wardrobe(p)[type] = equipped ? null : current.id;
+    p.featuredCosmetic = equipped ? null : current.id; p.showHairFocus = false;
+    save(); render(); showRewards(type, current.id);
+  });
+  setupTurntable();
+}
+
+// ---------- Customize (hair, hair colour, skin) ----------
+function showCustomize() {
+  const p = profile(); if (!p) { showProfiles(); return; }
+  const dots = (kind, values, selected) => '<div class="builder-options">' + values.map((v, i) => `<button class="builder-choice ${i === selected ? 'active' : ''}" data-choice="${kind}" data-value="${i}" aria-label="${typeof v === 'string' ? kind + ' ' + (i + 1) : v.name}" style="--choice:${typeof v === 'string' ? v : v.color}"></button>`).join('') + '</div>';
+  const styles = hairstylesFor(p.gender);
+  const hair = `<div class="builder-section"><b>Hairstyle</b><div class="hairstyle-options">${styles.map((v, i) => `<button class="hairstyle-choice ${i === p.hair ? 'active' : ''}" data-choice="hair" data-value="${i}" aria-label="${v.name}"><span class="hairstyle-thumb" style="background-image:url(${hairstylePath(p.gender, i)})"></span><small>${v.name}</small></button>`).join('')}</div></div>`;
+  const colors = styles[p.hair]?.bald ? '' : `<div class="builder-section"><b>Hair color</b>${dots('hairColor', HAIR_COLORS, p.hairColor)}</div>`;
+  openModal(`${header('MAKE IT YOURS', `Customize your ${p.gender === 'girl' ? 'girl' : 'boy'} explorer`)}<p>Your choices show up at home and in Sky Run.</p><div class="builder-preview">${explorerMarkup(p)}</div>${hair}${colors}<div class="builder-section"><b>Skin tone</b>${dots('skin', SKINS, p.skin)}</div><div class="wardrobe-tabs">${COSMETIC_TYPES.map(t => `<button class="wardrobe-tab" data-open-wardrobe="${t}">${COSMETIC_LABELS[t]}</button>`).join('')}</div>`);
+  $('#modalCard').querySelectorAll('[data-choice]').forEach(b => b.onclick = () => { p[b.dataset.choice] = Number(b.dataset.value); if (b.dataset.choice === 'hair' && styles[p.hair]?.bald) p.hairColor = 0; p.showHairFocus = true; save(); render(); showCustomize(); });
+  $('#modalCard').querySelectorAll('[data-open-wardrobe]').forEach(b => b.onclick = () => { p.showHairFocus = false; save(); showRewards(b.dataset.openWardrobe); });
+}
+
+// ---------- Grown-ups / test mode ----------
+function showGrownUps() {
+  if (!isMaster()) {
+    openModal(`${header('GROWN-UPS', 'Enter the test code')}<p>For parents and testers. The code turns on test mode on this device.</p><label class="field">Code<input id="masterCode" inputmode="numeric" maxlength="8" autocomplete="off"></label><button id="masterGo" class="button primary wide">Unlock test mode</button>`);
+    const go = () => { if ($('#masterCode').value.trim() === MASTER_CODE) { state.master = true; save(); render(); showGrownUps(); } else toast('That code isn’t right'); };
+    $('#masterGo').onclick = go; $('#masterCode').onkeydown = e => { if (e.key === 'Enter') go(); }; $('#masterCode').focus();
+    return;
+  }
+  const p = profile();
+  openModal(`${header('TEST MODE', 'Grown-up tools')}<p>Test mode is on for this device. Every look, decoration, and Sky Run is unlocked, and quizzes can be skipped. Skipping a quiz <b>does</b> mark the chapter as read for the current explorer, so use a test explorer for that.</p>${p ? `<div class="builder-section"><b>Preview home stage (not saved)</b><div class="test-row">${HOME_NAMES.map((n, i) => `<button class="button small ${homeStage(p) === i ? 'dark' : 'secondary'}" data-stage="${i}">${n}</button>`).join('')}<button class="button small ghost" data-stage="-1">Real</button></div></div><div class="builder-section"><b>Reading</b><div class="test-row"><button id="testMap" class="button small secondary">Open any chapter</button><button id="testHomeQuiz" class="button small secondary">Try a home quiz</button></div></div>` : ''}<div class="builder-section"><b>Sky Run</b><p class="fineprint">Start Sky Run normally — test options (start at 2,000 for the UFO, unlimited hearts, Bible pages) appear on its start screen.</p></div><a class="text-button" href="turnarounds/gallery.html">Character art gallery →</a><button id="masterOff" class="button secondary wide">Turn off test mode</button>`);
+  $('#modalCard').querySelectorAll('[data-stage]').forEach(b => b.onclick = () => { const v = Number(b.dataset.stage); testView.homeStage = v < 0 ? null : v; render(); showGrownUps(); });
+  $('#testMap')?.addEventListener('click', showChapters);
+  $('#testHomeQuiz')?.addEventListener('click', () => { const sorted = [...p.completed].sort((a, b) => a - b); const ch = sorted.length >= 3 ? sorted.slice(0, 3) : [1, 2, 3]; startQuiz({ mode: 'review', chapters: ch, test: true }); });
+  $('#masterOff').onclick = () => { state.master = false; testView.homeStage = null; save(); closeModal(); render(); };
+}
+
+// ---------- Wiring ----------
+$('#profileButton').onclick = showProfiles;
+$('#primaryButton').onclick = () => profile() ? $('#dashboard').scrollIntoView({ behavior: 'smooth' }) : showProfiles();
+$('#howButton').onclick = showHow;
+$('#readTodayButton').onclick = () => { const p = profile(); if (p) showReading(todayChapter(p)); };
+$('#mapButton').onclick = showChapters;
+$('#customizeButton').onclick = showCustomize;
+$('#playButton').onclick = () => openGame();
+$('#grownUpsButton').onclick = showGrownUps;
+$('#homeQuizButton').onclick = startHomeQuiz;
+$('#homeViewButton').onclick = () => { const p = profile(); if (p) { p.homeInside = !p.homeInside; save(); renderHome(p); } };
+$('#homeDecorButton').onclick = showHomeDecor;
+$('#modalLayer .modal-backdrop').onclick = closeModal;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); if (!$('#gameLayer').classList.contains('hidden')) closeGame(); } });
+(function setupHomeDragging() {
+  const scene = $('#homeScene'); let drag = null;
+  scene.addEventListener('pointerdown', e => { const piece = e.target.closest('[data-item]'); if (!piece) return; drag = piece; scene.setPointerCapture(e.pointerId); e.preventDefault(); });
+  scene.addEventListener('pointermove', e => {
+    if (!drag) return; const box = scene.getBoundingClientRect();
+    const x = Math.max(4, Math.min(96, (e.clientX - box.left) / box.width * 100)), y = Math.max(58, Math.min(92, (e.clientY - box.top) / box.height * 100));
+    drag.style.left = `${x}%`; drag.style.top = `${y}%`; drag.style.zIndex = Math.round(y);
+  });
+  const end = () => {
+    if (!drag) return; const p = profile(), key = drag.dataset.kind === 'exterior' ? 'outdoorPositions' : 'decorPositions';
+    p[key] = p[key] || {}; p[key][drag.dataset.item] = { x: parseFloat(drag.style.left) || 50, y: parseFloat(drag.style.top) || 75 }; save(); drag = null;
+  };
+  scene.addEventListener('pointerup', end); scene.addEventListener('pointercancel', end);
+})();
