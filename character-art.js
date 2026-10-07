@@ -62,21 +62,21 @@ function recolorSheetPixels(data,width,height,skin,outfit,recolorSkin=false,hair
 }
 // Per-angle body offsets of every turnaround sheet relative to the base sheet (computed offline).
 const SHEET_ANCHORS={"boy": {"style:bangs": [[-2, -1], [1, -1], [3, -2], [8, 0], [-1, 1], [2, 2], [3, 2], [4, 1]], "style:short-spiky": [[-1, -1], [3, -2], [7, -2], [10, -2], [-2, -1], [2, -2], [7, -2], [9, -2]], "style:tapered-afro": [[0, -1], [-1, 0], [-1, -1], [-1, -1], [0, -1], [-1, 0], [0, 0], [-1, -1]], "style:close-crop": [[0, -1], [1, -1], [1, -2], [7, 0], [1, 0], [2, 0], [3, 0], [6, -1]], "style:bald": [[0, -2], [-1, -1], [-2, -3], [-3, -3], [0, -1], [-1, -1], [-1, -1], [-2, -1]], "sun-cap": [[0, 1], [0, 1], [0, 1], [0, 1], [0, 0], [0, 0], [0, 0], [0, 1]], "star-dust": [[-1, -3], [-5, -5], [-1, -3], [-1, -1], [-2, -1], [-3, -1], [-1, 0], [-2, -1]], "classic-pack": [[0, -1], [-1, -1], [-1, -2], [0, -1], [0, -1], [-1, 0], [-2, -2], [-1, -1]], "coral-scout": [[0, -2], [0, -1], [1, -3], [0, -1], [0, 0], [1, -1], [-2, -1], [-1, -2]], "aviator-goggles": [[1, -1], [2, -1], [2, -2], [2, -2], [1, 0], [2, 0], [3, 1], [2, 0]], "sky-bolt": [[0, -1], [0, -1], [-1, -2], [-1, -2], [1, 0], [0, 0], [-1, 0], [-1, 0]], "twin-rockets": [[0, -1], [-1, -1], [-1, -2], [1, -2], [0, 0], [0, 0], [-3, -1], [-2, -1]], "sky-pilot": [[-1, -2], [-1, -1], [-2, -1], [-2, -2], [0, 0], [0, 0], [-2, 1], [-2, -1]], "gold-crown": [[0, 14], [-3, 12], [-2, 13], [-6, 14], [-1, 25], [1, 25], [-1, 24], [-5, 25]], "cloud-puffs": [[0, -1], [-1, -1], [-1, -2], [-2, -1], [0, -1], [-1, -2], [-1, 0], [-3, -1]], "butterfly-wings": [[-2, -5], [-2, -4], [2, -5], [11, -4], [-1, -6], [-1, -5], [-2, -4], [-3, -5]], "forest-ranger": [[0, -2], [-1, 0], [-1, -2], [-4, 0], [-1, 0], [-1, 0], [-1, 0], [-3, 0]], "star-visor": [[0, -1], [1, -1], [2, -2], [2, -1], [0, -1], [1, -1], [2, -1], [1, -1]], "heart-sparks": [[0, -1], [-1, -1], [-1, -1], [-1, -2], [0, -2], [0, -2], [-1, -2], [-1, -2]], "cloud-jet": [[-1, -5], [-1, -4], [1, -6], [3, -5], [-1, -8], [0, -9], [1, -8], [0, -9]], "royal-adventurer": [[-1, -3], [0, -3], [3, -3], [9, -3], [0, -3], [2, -3], [4, -2], [7, -4]], "leaf-wreath": [[0, -1], [-1, -1], [0, -2], [-1, -1], [-1, -2], [0, -1], [-1, -2], [-2, -2]], "page-flutter": [[1, -1], [2, -1], [4, -1], [5, -1], [1, -1], [3, -1], [5, -1], [5, -1]], "comet-engine": [[0, -2], [0, -1], [-1, -3], [1, -2], [1, -1], [-1, -1], [0, 0], [0, -1]], "sunset-surfer": [[-1, -2], [-2, -1], [-1, -3], [-2, -2], [-1, -2], [-1, -2], [-1, -2], [-3, -3]], "cloud-headphones": [[-1, -4], [-2, -5], [-2, -5], [-2, -5], [-2, -7], [-2, -6], [-2, -6], [-2, -6]], "golden-guardian": [[-1, -2], [-1, -2], [-1, -1], [0, -1], [0, -2], [0, -1], [-1, -1], [-1, -2]], "sunburst-band": [[0, -1], [0, -1], [0, -2], [-1, -1], [0, -1], [0, -1], [0, -1], [-1, -1]], "night-explorer": [[-1, -2], [-4, 0], [-2, -1], [-7, -1], [-1, -1], [0, -1], [-4, -1], [-7, -2]], "moon-helmet": [[0, -1], [6, 1], [0, -1], [-7, 0], [0, 4], [3, 4], [-6, 4], [7, 3]], "ocean-voyager": [[-1, -1], [-1, 0], [1, -1], [3, -1], [0, -1], [-1, -1], [1, 0], [2, -2]], "compass-badge": [[0, -4], [0, -4], [2, -5], [2, -4], [0, -7], [0, -7], [3, -7], [1, -7]], "winged-helmet": [[0, -3], [3, -4], [3, -5], [1, -3], [-1, -3], [3, -3], [5, -3], [6, -2]]}, "girl": {"style:high-curly-ponytail": [[0, -1], [1, -1], [2, -1], [0, -1], [-2, -1], [-15, -1], [-19, -2], [8, -1]], "style:curly-braids": [[0, -1], [-1, -1], [2, -1], [1, -1], [0, 0], [0, 0], [2, 0], [0, 0]], "style:long-straight": [[0, -2], [-1, -2], [-1, -3], [0, -2], [0, -2], [-1, -3], [-1, -2], [-1, -2]], "style:short-straight": [[0, -1], [-3, -1], [-3, -2], [-6, -2], [-1, -2], [-2, -2], [-3, -1], [-7, -2]], "style:half-up-curls": [[-1, -4], [0, -4], [5, -4], [-1, -4], [-1, -6], [0, -6], [2, -5], [0, -5]], "sun-cap": [[7, -2], [5, -3], [8, -2], [-17, -1], [2, -2], [-7, 0], [-4, 0], [-11, 2]], "star-dust": [[0, -2], [-5, -11], [18, -7], [8, -5], [-2, -9], [-7, -12], [-24, -7], [9, -8]], "classic-pack": [[0, 0], [0, -1], [4, -1], [0, -1], [1, 0], [0, 0], [-1, 0], [-2, -1]], "aviator-goggles": [[9, 8], [6, 8], [11, 10], [-4, 10], [3, 11], [-7, 11], [-12, 12], [-3, 14]], "sky-bolt": [[6, -3], [-11, -2], [25, -3], [-4, -2], [2, -3], [-9, -4], [-11, -3], [-10, -1]], "twin-rockets": [[-1, -2], [-2, -2], [-1, -3], [3, -2], [0, -1], [0, -1], [0, -3], [-2, 0]], "gold-crown": [[1, 4], [-6, 3], [-9, 6], [-20, 5], [-1, 14], [-4, 11], [-15, 11], [-4, 14]], "cloud-puffs": [[0, -2], [-1, -3], [10, -4], [-1, -3], [0, -2], [-2, -6], [1, -1], [-4, -3]], "butterfly-wings": [[1, -4], [2, -5], [14, -6], [0, -3], [1, -3], [3, -5], [0, -9], [0, -5]], "star-visor": [[0, -2], [-2, -3], [12, -2], [2, -2], [0, -4], [-3, -2], [5, 0], [0, -3]], "heart-sparks": [[0, -2], [-2, -1], [18, -1], [-3, -1], [-4, -4], [-1, -5], [-9, -3], [-7, -5]], "cloud-jet": [[0, -3], [-4, -2], [21, -7], [2, -6], [0, -2], [-4, -5], [-11, -4], [-7, -3]], "leaf-wreath": [[1, -2], [-1, -2], [-2, -3], [-3, -3], [0, 0], [0, -1], [-2, -1], [-3, -1]], "page-flutter": [[-2, -2], [-6, -1], [31, -1], [-1, -1], [-4, 0], [-8, 0], [-9, -1], [-10, 0]], "comet-engine": [[-1, -2], [-2, -2], [-3, -5], [-6, -3], [0, -3], [-1, -3], [-1, -3], [-7, -3]], "cloud-headphones": [[0, -1], [-4, -3], [-2, -1], [-8, -2], [0, -2], [-2, -2], [-10, -1], [-7, -3]], "sunburst-band": [[0, -1], [-4, -1], [4, 1], [1, -2], [0, -2], [-2, -3], [-9, -3], [0, -2]], "moon-helmet": [[0, -2], [-4, -2], [11, -2], [7, 1], [-1, 8], [-5, 6], [-16, 7], [5, 10]], "compass-badge": [[0, -5], [-4, -4], [4, -4], [-24, -5], [-2, -7], [-3, -6], [2, -6], [-9, -5]], "winged-helmet": [[2, -5], [-4, -5], [3, -2], [-9, -4], [3, -1], [-5, -2], [-9, -1], [-7, -2]]}};
+const HEAD_ANCHORS={"boy":{"style:bangs":[[0,-1],[3,-1],[4,-1],[8,0],[-1,1],[2,2],[3,1],[8,0]],"style:short-spiky":[[0,-1],[8,-1],[9,-1],[10,-2],[-2,-1],[2,-2],[6,-2],[13,-2]],"style:tapered-afro":[[0,0],[-1,0],[0,0],[-1,-1],[0,-1],[-1,0],[-1,-2],[-1,-2]],"style:close-crop":[[0,-1],[2,0],[1,-1],[7,0],[1,0],[2,0],[3,-4],[8,-5]],"style:bald":[[0,-1],[-1,-1],[-1,-1],[-3,-3],[0,-1],[-1,-1],[-2,-4],[-2,-4]],"sun-cap":[[0,1],[0,1],[0,1],[0,1],[0,0],[0,0],[0,2],[0,2]],"star-dust":[[0,-1],[-3,-4],[0,-1],[-1,-1],[-2,-1],[-3,-1],[-1,-1],[-1,-1]],"classic-pack":[[0,-1],[-1,-1],[-1,-1],[0,-1],[0,-1],[-1,0],[-2,-1],[0,-2]],"coral-scout":[[1,-1],[-1,-1],[5,-1],[0,-1],[0,0],[1,-1],[1,-1],[1,-1]],"aviator-goggles":[[5,0],[3,0],[3,-1],[2,-2],[1,0],[2,0],[2,-2],[5,-2]],"sky-bolt":[[0,-1],[0,-1],[-1,-1],[-1,-2],[1,0],[0,0],[-1,-1],[-1,-1]],"twin-rockets":[[0,0],[0,0],[-1,0],[1,-2],[0,0],[0,0],[-2,0],[-1,-1]],"sky-pilot":[[0,-1],[-1,0],[0,-1],[-2,-2],[0,0],[0,0],[-1,-2],[0,-2]],"gold-crown":[[0,19],[-4,20],[-2,20],[-6,14],[-1,25],[1,25],[-1,31],[-4,32]],"cloud-puffs":[[0,-1],[-1,-1],[-2,-1],[-2,-1],[0,-1],[-1,-2],[-2,-1],[-2,-2]],"butterfly-wings":[[-1,-1],[0,-1],[1,-1],[11,-4],[-1,-6],[-1,-5],[0,-5],[1,-5]],"forest-ranger":[[0,-1],[-1,-1],[0,-2],[-4,0],[-1,0],[-1,0],[-2,-2],[-3,-2]],"star-visor":[[0,0],[1,0],[3,0],[2,-1],[0,-1],[1,-1],[1,-1],[1,-1]],"heart-sparks":[[0,-1],[0,-1],[0,-1],[-1,-2],[0,-2],[0,-2],[-1,-1],[-1,-1]],"cloud-jet":[[0,-2],[1,-1],[1,-1],[3,-5],[-1,-8],[0,-9],[1,-6],[2,-6]],"royal-adventurer":[[0,-1],[0,-1],[5,-1],[9,-3],[0,-3],[2,-3],[5,-4],[8,-4]],"leaf-wreath":[[0,-1],[0,-1],[0,-1],[-1,-1],[-1,-2],[0,-1],[0,-2],[0,-2]],"page-flutter":[[1,-1],[3,-1],[4,-1],[5,-1],[1,-1],[3,-1],[4,-1],[6,-1]],"comet-engine":[[1,-1],[0,-1],[0,-1],[1,-2],[1,-1],[-1,-1],[-1,-1],[0,-1]],"sunset-surfer":[[0,-1],[-1,-1],[-1,-1],[-2,-2],[-1,-2],[-1,-2],[-1,-2],[-1,-1]],"cloud-headphones":[[0,-1],[0,-1],[-1,-2],[-2,-5],[-2,-7],[-2,-6],[-1,-3],[1,-3]],"golden-guardian":[[0,-1],[0,-1],[-1,-1],[0,-1],[0,-2],[0,-1],[-1,-2],[-1,-1]],"sunburst-band":[[0,-1],[0,-1],[0,-1],[-1,-1],[0,-1],[0,-1],[0,-2],[0,-2]],"night-explorer":[[1,-1],[-2,-1],[-2,-1],[-7,-1],[-1,-1],[0,-1],[-4,-2],[-4,-2]],"moon-helmet":[[1,2],[12,4],[2,6],[-7,0],[0,4],[3,4],[-7,7],[11,9]],"ocean-voyager":[[1,-1],[1,0],[3,-1],[3,-1],[0,-1],[-1,-1],[1,-1],[2,-2]],"compass-badge":[[0,-1],[1,-1],[3,-1],[2,-4],[0,-7],[0,-7],[3,-6],[2,-6]],"winged-helmet":[[0,4],[6,2],[7,3],[1,-3],[-1,-3],[3,-3],[4,3],[8,3]]},"girl":{"style:high-curly-ponytail":[[0,0],[5,0],[7,2],[0,-1],[-2,-1],[-15,-1],[-24,5],[17,7]],"style:curly-braids":[[0,-1],[0,-1],[4,-1],[1,-1],[0,0],[0,0],[2,-1],[1,-2]],"style:long-straight":[[-1,-1],[0,-1],[0,-1],[0,-2],[0,-2],[-1,-3],[-1,-3],[-1,-2]],"style:short-straight":[[-1,-1],[-3,0],[-3,-1],[-6,-2],[-1,-2],[-2,-2],[-2,-2],[-7,-1]],"style:half-up-curls":[[-1,-2],[2,-2],[7,-1],[-1,-4],[-1,-6],[0,-6],[5,-3],[4,-2]],"sun-cap":[[12,-1],[9,-3],[13,0],[-17,-1],[2,-2],[-7,0],[-7,2],[0,11]],"star-dust":[[0,-1],[0,-1],[19,-1],[8,-5],[-2,-9],[-7,-12],[-26,-3],[12,-3]],"classic-pack":[[0,0],[1,0],[5,0],[0,-1],[1,0],[0,0],[1,-2],[1,-1]],"aviator-goggles":[[15,10],[18,8],[16,10],[-4,10],[3,11],[-7,11],[-13,17],[3,21]],"sky-bolt":[[6,0],[-10,0],[25,1],[-4,-2],[2,-3],[-9,-4],[-11,-1],[-6,-1]],"twin-rockets":[[-1,0],[0,0],[1,0],[3,-2],[0,-1],[0,-1],[0,-1],[1,-1]],"gold-crown":[[2,15],[-6,12],[-7,19],[-20,5],[-1,14],[-4,11],[-16,23],[7,29]],"cloud-puffs":[[0,0],[-1,0],[11,0],[-1,-3],[0,-2],[-2,-6],[0,-2],[-1,-1]],"butterfly-wings":[[3,-1],[4,-1],[11,-1],[0,-3],[1,-3],[3,-5],[5,-2],[4,-3]],"star-visor":[[0,0],[5,0],[14,1],[2,-2],[0,-4],[-3,-2],[3,0],[8,1]],"heart-sparks":[[0,0],[1,0],[23,1],[-3,-1],[-4,-4],[-1,-5],[-8,0],[-4,-1]],"cloud-jet":[[0,-1],[-3,-1],[21,0],[2,-6],[0,-2],[-4,-5],[-5,-2],[-4,-1]],"leaf-wreath":[[1,-1],[0,-1],[-2,-1],[-3,-3],[0,0],[0,-1],[-1,-1],[-2,-1]],"page-flutter":[[-1,0],[-3,0],[31,0],[-1,-1],[-4,0],[-8,0],[-9,0],[-8,0]],"comet-engine":[[0,-1],[-1,-1],[-2,-1],[-6,-3],[0,-3],[-1,-3],[-3,-3],[-5,-2]],"cloud-headphones":[[0,0],[-1,-1],[0,-1],[-8,-2],[0,-2],[-2,-2],[-14,-2],[-2,-1]],"sunburst-band":[[3,4],[-5,1],[6,9],[1,-2],[0,-2],[-2,-3],[-15,-2],[4,0]],"moon-helmet":[[0,1],[0,0],[15,2],[7,1],[-1,8],[-5,6],[-15,12],[9,26]],"compass-badge":[[0,-1],[1,-1],[5,0],[-24,-5],[-2,-7],[-3,-6],[4,-4],[-8,-2]],"winged-helmet":[[6,2],[1,0],[4,4],[-9,-4],[3,-1],[-5,-2],[-12,2],[1,4]]}};
 const NECK_Y=160;
 function isHairPx(r,g,b){const mx=Math.max(r,g,b);return mx<125&&r>=g&&g>=b-6&&r-b<70;}
 // Put the chosen hairstyle's head onto an item sheet (outfits, jetpacks, trails), angle by angle.
-function swapHead(itemIm,styleIm,gender,itemId,styleId){
-  const W=itemIm.naturalWidth,H=itemIm.naturalHeight,cw=W/4,ch=H/2;
+// Put a head (hairstyle sheet, or a full-cover hat sheet) onto a body sheet, angle by angle.
+function swapHead(bodyIm,headIm,gender,bodyKey,headKey){
+  const W=bodyIm.naturalWidth||bodyIm.width,H=bodyIm.naturalHeight||bodyIm.height,cw=W/4,ch=H/2;
   const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d',{willReadFrequently:true});
-  x.drawImage(itemIm,0,0);const it=x.getImageData(0,0,W,H),d=it.data;
-  const s=document.createElement('canvas');s.width=W;s.height=H;const sx=s.getContext('2d',{willReadFrequently:true});sx.drawImage(styleIm,0,0);const sd=sx.getImageData(0,0,W,H).data;
-  const A=SHEET_ANCHORS[gender]||{},io=A[itemId],so=A['style:'+styleId];
-  const longHair=gender==='girl',lowY=longHair?330:NECK_Y+14;
+  x.drawImage(bodyIm,0,0);const it=x.getImageData(0,0,W,H),d=it.data;
+  const s=document.createElement('canvas');s.width=W;s.height=H;const sx=s.getContext('2d',{willReadFrequently:true});sx.drawImage(headIm,0,0);const sd=sx.getImageData(0,0,W,H).data;
+  const A=SHEET_ANCHORS[gender]||{},io=A[bodyKey],so=A[headKey];
+  const lowY=gender==='girl'?330:NECK_Y+14;
   for(let a=0;a<8;a++){
     const ox=(a%4)*cw,oy=Math.floor(a/4)*ch,dx=(io?.[a]?.[0]||0)-(so?.[a]?.[0]||0),dy=(io?.[a]?.[1]||0)-(so?.[a]?.[1]||0);
-    // 1) remove the sheet's own hair around the head
     for(let y=0;y<lowY;y++)for(let X=0;X<cw;X++){const i=((oy+y)*W+ox+X)*4;if(d[i+3]>10&&(y<NECK_Y-40||isHairPx(d[i],d[i+1],d[i+2])))d[i+3]=0;}
-    // 2) copy the hairstyle head (and long hair below the neck for girls)
     for(let y=0;y<lowY;y++){const ty=y+dy;if(ty<0||ty>=ch)continue;for(let X=0;X<cw;X++){const tx=X+dx;if(tx<0||tx>=cw)continue;
       const si=((oy+y)*W+ox+X)*4,sa=sd[si+3];if(sa<8)continue;
       if(y>=NECK_Y&&!isHairPx(sd[si],sd[si+1],sd[si+2]))continue;
@@ -85,33 +85,68 @@ function swapHead(itemIm,styleIm,gender,itemId,styleId){
   }
   x.putImageData(it,0,0);return c;
 }
+// Hats that cover the whole head use their own full head art; smaller accessories are layered on top.
+const COVER_HATS=['sun-cap','moon-helmet','winged-helmet'];
+const hairCache=new Map();
+// A sheet with its hair recoloured using the precomputed hair mask (red = hair).
+function hairColored(src,maskSrc,hairColorIndex){
+  const key=src+'|'+hairColorIndex;
+  if(!hairCache.has(key))hairCache.set(key,Promise.all([loadCharacterImage(src),hairColorIndex?loadCharacterImage(maskSrc).catch(()=>null):null]).then(([im,mask])=>{
+    if(!mask)return im;
+    const W=im.naturalWidth,H=im.naturalHeight,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d',{willReadFrequently:true});
+    x.drawImage(mask,0,0,W,H);const md=x.getImageData(0,0,W,H).data;x.clearRect(0,0,W,H);x.drawImage(im,0,0);const id=x.getImageData(0,0,W,H),d=id.data;
+    for(let i=0;i<d.length;i+=4)if(md[i]>127&&d[i+3]>20)hairRecolor(d,i,hairColorIndex);
+    x.putImageData(id,0,0);return c;
+  }));
+  return hairCache.get(key);
+}
 function characterSheet(gender,item,hair=0,skinIndex=2,hairColorIndex=0,accId=''){
   const skin=typeof SKINS!=='undefined'?SKINS[skinIndex]||SKINS[2]:'#bd8058';
   const style=hairstylesFor(gender)[hair]||hairstylesFor(gender)[0];
-  // Accessories are separate layers placed on top of the explorer, so the chosen hairstyle stays.
   if(item?.type==='accessory'){accId=item.id;item=null;}
-  const path=variantPath(gender,item,hair);
-  const color=style.bald?0:hairColorIndex;
-  const swap=item&&!(gender==='girl'&&item.type==='outfit');
-  if(!swap&&!accId&&skinIndex===2&&color===0&&(gender==='boy'||item?.type!=='outfit'))return Promise.resolve(path);
-  const key=[path,skinIndex,color,item?.type==='outfit'?item.id:'',swap?style.id:'',accId].join('|');
-  const root=window.CHARACTER_ROOT||'';
-  if(!sheetCache.has(key))sheetCache.set(key,Promise.all([loadCharacterImage(path),swap?loadCharacterImage(hairstylePath(gender,hair)):null,accId?loadCharacterImage(root+'turnarounds/layers/'+gender+'-'+accId+'.webp'):null]).then(([im,styleIm,layer])=>{
-    const src=swap?swapHead(im,styleIm,gender,item.id,style.id):im;
-    const canvas=document.createElement('canvas');canvas.width=im.naturalWidth;canvas.height=im.naturalHeight;
-    const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(src,0,0);
-    if(skinIndex!==2||color!==0||(gender==='girl'&&item?.type==='outfit')){
-      const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
-      recolorSheetPixels(pixels.data,canvas.width,canvas.height,skin,gender==='girl'&&item?.type==='outfit'?item:null,skinIndex!==2,color,gender);
-      ctx.putImageData(pixels,0,0);
-    }
-    if(layer){
-      const A=SHEET_ANCHORS[gender]||{},to=A[item?item.id:'style:'+style.id],fo=A[accId],cw=canvas.width/4,ch=canvas.height/2;
-      for(let a=0;a<8;a++){const ox=(a%4)*cw,oy=Math.floor(a/4)*ch,dx=(to?.[a]?.[0]||0)-(fo?.[a]?.[0]||0),dy=(to?.[a]?.[1]||0)-(fo?.[a]?.[1]||0);
-        ctx.save();ctx.beginPath();ctx.rect(ox,oy,cw,ch);ctx.clip();ctx.drawImage(layer,ox,oy,cw,ch,ox+dx,oy+dy,cw,ch);ctx.restore();}
-    }
-    return canvas.toDataURL('image/png');
-  }));
+  const root=window.CHARACTER_ROOT||'',color=style.bald?0:hairColorIndex,cover=gender==='boy'&&COVER_HATS.includes(accId);
+  const stylePath=hairstylePath(gender,hair),plainPath=variantPath(gender,item,hair);
+  const girlOutfit=gender==='girl'&&item?.type==='outfit';
+  const bodyFromItem=item&&!girlOutfit;
+  if(!bodyFromItem&&!accId&&skinIndex===2&&color===0&&!girlOutfit)return Promise.resolve(stylePath);
+  const key=[gender,item?.id||'',style.id,skinIndex,color,accId].join('|');
+  if(!sheetCache.has(key)){
+    const accPath=root+(gender==='girl'?'turnarounds/girl/':'turnarounds/')+accId+'.webp';
+    const head=cover?hairColored(accPath,root+'turnarounds/hairmask/'+gender+'-'+accId+'.webp',color)
+                    :hairColored(stylePath,root+'turnarounds/hairmask/'+gender+'-'+style.id+'.webp',color);
+    const styleIm=hairColored(stylePath,root+'turnarounds/hairmask/'+gender+'-'+style.id+'.webp',color);
+    const maskPath=root+'turnarounds/hairmask/'+gender+'-'+style.id+'.webp';
+    sheetCache.set(key,Promise.all([bodyFromItem?loadCharacterImage(plainPath):girlOutfit?loadCharacterImage(stylePath):styleIm,head,accId&&!cover?loadCharacterImage(root+'turnarounds/layers/'+gender+'-'+accId+'.webp'):null,girlOutfit&&color?loadCharacterImage(maskPath).catch(()=>null):null]).then(([body,headIm,layer,mask])=>{
+      const bodyKey=bodyFromItem?item.id:'style:'+style.id;
+      if(girlOutfit){
+        // outfit palette first (on the original art), then the hair colour via the mask, so blonde hair is never mistaken for the suit
+        const W=body.naturalWidth,H=body.naturalHeight,cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d',{willReadFrequently:true});
+        let md=null;if(mask){cx.drawImage(mask,0,0,W,H);md=cx.getImageData(0,0,W,H).data;cx.clearRect(0,0,W,H);}
+        cx.drawImage(body,0,0);const px=cx.getImageData(0,0,W,H),dd=px.data;
+        if(md){const keep=new Uint8ClampedArray(dd);recolorSheetPixels(dd,W,H,skin,item,false,0,gender);for(let i=0;i<dd.length;i+=4)if(md[i]>127&&keep[i+3]>20){dd[i]=keep[i];dd[i+1]=keep[i+1];dd[i+2]=keep[i+2];hairRecolor(dd,i,color);}}
+        else recolorSheetPixels(dd,W,H,skin,item,false,0,gender);
+        cx.putImageData(px,0,0);body=cv;
+      }
+      const src=(bodyFromItem||cover)?swapHead(body,headIm,gender,bodyKey,cover?accId:'style:'+style.id):body;
+      const W=src.naturalWidth||src.width,H=src.naturalHeight||src.height;
+      const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(src,0,0);
+      if(skinIndex!==2){
+        const pixels=ctx.getImageData(0,0,W,H);
+        recolorSheetPixels(pixels.data,W,H,skin,null,true,0,gender);
+        ctx.putImageData(pixels,0,0);
+      }
+      if(layer){
+        // place the accessory where the head actually is: head of the hairstyle, moved with the body it was put on
+        const B=SHEET_ANCHORS[gender]||{},HA=HEAD_ANCHORS[gender]||{},sk='style:'+style.id,cw=W/4,ch=H/2,g=(o,a,k)=>o?.[a]?.[k]||0;
+        for(let a=0;a<8;a++){const ox=(a%4)*cw,oy=Math.floor(a/4)*ch;
+          const hx=g(HA[sk],a,0)+(bodyFromItem?g(B[bodyKey],a,0)-g(B[sk],a,0):0),hy=g(HA[sk],a,1)+(bodyFromItem?g(B[bodyKey],a,1)-g(B[sk],a,1):0);
+          const dx=hx-g(HA[accId],a,0),dy=hy-g(HA[accId],a,1);
+          ctx.save();ctx.beginPath();ctx.rect(ox,oy,cw,ch);ctx.clip();ctx.drawImage(layer,ox,oy,cw,ch,ox+dx,oy+dy,cw,ch);ctx.restore();}
+      }
+      return canvas.toDataURL('image/png');
+    }));
+  }
   return sheetCache.get(key);
 }
 // Flying sprites with the explorer's own hairstyle (built offline) + runtime skin / hair colour from a mask.

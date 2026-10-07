@@ -118,3 +118,4 @@ body.playing{overflow:hidden}
 #homeDecor{z-index:auto}
 .home-character{z-index:88}
 @media (max-width:700px){.home-actions .button:last-child{grid-column:auto}}
+.home-character{pointer-events:none}.placed-decor{cursor:grab;touch-action:none}
