@@ -137,7 +137,8 @@ function render() {
   const s = streak(p);
   $('#streakNumber').textContent = s;
   $('#streakUnit').textContent = s === 1 ? 'day' : 'days';
-  $('#streakBar').style.width = `${Math.min(28, s) / 28 * 100}%`;
+  const heat = Math.min(1, s / 14); const card = $('.streak-card'); card.style.setProperty('--heat', heat.toFixed(3)); card.dataset.heat = s >= 14 ? 'blaze' : s >= 7 ? 'hot' : s >= 3 ? 'warm' : s > 0 ? 'lit' : 'out';
+  const read = Math.min(28, p.completed.length); $('#bookText').textContent = `${read} / 28 chapters`; $('#bookBar').style.width = `${read / 28 * 100}%`;
   $('.streak-card').classList.toggle('lit', s > 0);
   const deep = Object.keys(p.reflections || {}).length; $('#deepBadge').textContent = deep ? `⭐ Deep Thinker × ${deep}` : ''; $('#deepBadge').classList.toggle('hidden', !deep);
   $('#streakText').textContent = s >= 28 ? '28-day champion! Keep the fire going!' : s === 0 ? 'Read today to light your fire!' : done ? `Day ${s} of 28 · see you tomorrow!` : `Day ${s} of 28 · read today to keep it going!`;

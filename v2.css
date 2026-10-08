@@ -147,3 +147,27 @@ body.playing{overflow:hidden}
 .mute-button{margin-left:auto;margin-right:6px;font-size:18px}.mute-button.off{opacity:.6}
 .deep-badge{display:block;margin-bottom:4px;color:#b07a1c!important;font-weight:800}.bonus-note{color:#b07a1c!important;font-weight:700}.share-note{font-size:15px;text-align:center}
 .quiz-option:disabled{opacity:1;color:var(--ink)}.quiz-option:disabled:not(.correct):not(.wrong){opacity:.6}
+
+/* Streak flame grows with the streak (no bar) */
+.streak-card{--heat:0}
+.streak-fire{width:calc(64px + 70px * var(--heat));height:calc(80px + 88px * var(--heat));transition:width .5s,height .5s}
+.streak-fire:before{width:calc(56px + 62px * var(--heat));height:calc(56px + 62px * var(--heat));box-shadow:0 0 calc(18px + 30px * var(--heat)) #ff7a2bcc}
+.streak-fire:after{width:calc(28px + 31px * var(--heat));height:calc(28px + 31px * var(--heat))}
+.streak-card.lit .streak-fire{animation:flicker calc(1.2s - .65s * var(--heat)) ease-in-out infinite alternate}
+.streak-card[data-heat=hot] .streak-fire:before,.streak-card[data-heat=blaze] .streak-fire:before{background:radial-gradient(circle at 60% 40%,#fff1a0,#ff8a3d 45%,#e8321b 75%)}
+.streak-card[data-heat=blaze]{background:linear-gradient(160deg,#fff1d6,#ffcf9e)}
+.ember{position:absolute;left:50%;bottom:40%;width:6px;height:6px;border-radius:50%;background:#ffd23f;opacity:0;box-shadow:0 0 6px #ff8a3d}
+.streak-card[data-heat=warm] .ember.e1,.streak-card[data-heat=hot] .ember.e1,.streak-card[data-heat=hot] .ember.e2,.streak-card[data-heat=blaze] .ember{animation:ember 1.4s ease-out infinite}
+.ember.e2{animation-delay:.35s!important;margin-left:-10px}.ember.e3{animation-delay:.7s!important;margin-left:8px}.ember.e4{animation-delay:1.05s!important;margin-left:-4px}
+@keyframes ember{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(calc(var(--d,6px)),-60px) scale(.3)}}
+.ember.e2{--d:-12px}.ember.e3{--d:14px}
+.streak-main{margin:6px 0 8px}
+/* Matthew progress */
+.book-progress{margin:-4px 0 14px}
+.book-progress-top{display:flex;justify-content:space-between;font-size:12.5px;font-weight:800;color:#7a5a3c;margin-bottom:5px}
+.book-progress-top b{color:#29464a}
+.book-track{height:12px;border-radius:99px;background:#e9cfa6;overflow:hidden}
+.book-track span{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#59877d,#7bb7a2);transition:width .6s}
+.play-preview{aspect-ratio:16/9}
+.streak-card{justify-content:center}.streak-card .panel-kicker{margin-bottom:auto}.streak-card small:last-child{margin-bottom:auto}.streak-number{font-size:clamp(64px,7vw,92px)}
+@media (max-width:700px){.streak-card{flex-direction:column}.streak-card .panel-kicker,.streak-card small:last-child{margin:0}}

@@ -441,19 +441,26 @@ function drawIdle() {
   ctx.font = 'bold 22px FavorSans, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#345c67'; ctx.fillText('PRESS START TO FLY', 560, 300); ctx.textAlign = 'left';
 }
 // Small preview for the dashboard card.
+// Dashboard preview: a real Sky Run scene drawn with the game's own art, then copied into the card.
 function drawPlayPreview(p) {
-  const c = $('#playPreview'); if (!c) return; const x = c.getContext('2d');
+  const c = $('#playPreview'); if (!c) return; c.width = 480; c.height = 270; const x = c.getContext('2d');
+  const scene = {
+    t: 120, y: 250, vy: -2, hearts: 3, gems: 0, stars: 0, power: 0, throwT: 0, shine: 0, invuln: 0, hurt: 0, shake: 0,
+    hazards: [{ kind: 'gear', x: 455, y: 320, r: 30, colors: COLORS_GEAR[2], phase: 1.2, bob: 0 }, { kind: 'zap', x: 560, y: 225, len: 120, angle: Math.PI / 2, spin: 0, phase: 0 }],
+    gemList: [0, 1, 2, 3].map(i => ({ x: 310 + i * 40, y: 175 + Math.sin(i * .9) * 12, phase: i })), starList: [{ x: 500, y: 140, phase: 0 }],
+    powerups: [], shots: [], lasers: [], particles: [], rings: [], popups: [], heartFx: [], ufo: null
+  };
   const draw = () => {
-    x.clearRect(0, 0, 320, 150);
-    const gr = x.createLinearGradient(0, 0, 0, 150); gr.addColorStop(0, '#f9b25c'); gr.addColorStop(1, '#fbe8ca'); x.fillStyle = gr; x.fillRect(0, 0, 320, 150);
-    x.fillStyle = '#fff6e6c0'; x.beginPath(); x.ellipse(250, 40, 40, 12, 0, 0, Math.PI * 2); x.ellipse(235, 30, 20, 14, 0, 0, Math.PI * 2); x.fill();
-    const sheet = runnerSheet(p), outfit = equippedCosmetic(p, 'outfit')?.id || 'coral-scout', idx = Math.max(0, FLIGHT_OUTFITS.indexOf(outfit));
-    const w = sheet.naturalWidth || sheet.width, h = sheet.naturalHeight || sheet.height;
-    const sz = sheet.padded ? 190 : 140;
-    if (w) x.drawImage(sheet, idx % 4 * w / 4, Math.floor(idx / 4) * h / 2, w / 4, h / 2, 165 - sz / 2, 75 - sz / 2, sz, sz);
+    if (game?.running) return;
+    const saved = game; game = scene;
+    for (let i = 0; i < 18; i++) scene.particles.push({ x: PX - 40 - i * 7, y: scene.y + 24 + (i % 3 - 1) * 5, vx: 0, vy: 0, life: 26 - i, color: equippedCosmetic(p, 'trail')?.colors[0] || '#ffd16a', kind: equippedCosmetic(p, 'trail')?.id || 'spark', size: 5 });
+    try { drawGame(); } finally { game = saved; scene.particles = []; }
+    x.clearRect(0, 0, 480, 270); x.drawImage(canvas, 110, 110, 500, 281, 0, 0, 480, 270);
+    if (!saved) { drawIdle(); }
   };
   draw(); if (window.buildRunnerSheet) buildRunnerSheet(p).then(draw).catch(() => { });
   [sheets.boy, sheets.girl].forEach(s => s.addEventListener('load', draw, { once: true }));
+  setTimeout(draw, 1200);
 }
 
 // ---------- Controls (no text selection or long-press menus on phones) ----------
