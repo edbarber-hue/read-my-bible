@@ -211,3 +211,8 @@ body.playing{overflow:hidden}
 .pd-asked span,.pd-said span{display:block;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#a0623f}.pd-said span{color:#315b5a}
 .pd-asked p,.pd-said p{margin:2px 0!important;color:#29464a!important;font-size:15px}.pd-said p{font-size:17px;font-weight:700}
 .pd-talk-head b:after{content:" — ask your child";font-weight:600;color:var(--muted);font-size:13px}
+
+.pd-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0 0;background:#f3e6d2;border-radius:12px;padding:4px}
+.pd-tab{border:0;border-radius:9px;padding:10px 6px;font-weight:800;background:transparent;color:#7a5a3c;cursor:pointer}
+.pd-tab.active{background:#fff;color:#29464a;box-shadow:0 2px 6px #0001}
+.pd-pane .pd-journal,.pd-pane .pd-talk{margin-top:8px}

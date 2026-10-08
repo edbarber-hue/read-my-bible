@@ -12,7 +12,7 @@ let state = loadState(), currentId = state.currentId;
 let quiz = null;            // {mode:'daily'|'review', chapter, chapters, questions, index, score, runId, picked, advancing}
 let readingChapter = 1, passageText = '';
 const narration = { active: false, token: 0, audio: null, timer: null };
-const testView = { homeStage: null };   // master-mode preview only, never saved
+const testView = { homeStage: null, streak: null };   // master-mode preview only, never saved
 
 function loadState() { try { const x = JSON.parse(localStorage.getItem(STORE)); if (x && Array.isArray(x.profiles)) return x; } catch { } return { profiles: [], currentId: null }; }
 function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { toast('Could not save on this device'); } }
@@ -135,7 +135,7 @@ function render() {
   $('#welcomeTitle').textContent = `Ready, ${firstName(p)}?`;
 
   // Streak
-  const s = streak(p);
+  const s = testView.streak ?? streak(p);
   $('#streakNumber').textContent = s;
   $('#streakUnit').textContent = s === 1 ? 'day' : 'days';
   const heat = Math.min(1, s / 14); const card = $('.streak-card'); card.style.setProperty('--heat', heat.toFixed(3)); card.dataset.heat = s >= 14 ? 'blaze' : s >= 7 ? 'hot' : s >= 3 ? 'warm' : s > 0 ? 'lit' : 'out';
@@ -572,12 +572,14 @@ function showParentDashboard(focusId) {
       <p class="pd-last">Last read: <b>${niceDay(last)}${lastCh ? ` · Matthew ${lastCh}` : ''}</b></p>
       <div class="pd-week"><small>Days read this week</small><div>${week}</div></div>
       ${k.shareWith ? `<div class="notice">💬 ${escapeHtml(k.name)} wants to tell <b>${escapeHtml(k.shareWith)}</b> about Jesus. Help them make a plan this week!</div>` : ''}
-      ${journalHtml(k)}
-      <div class="pd-talk"><div class="pd-talk-head"><b>Talk together</b><select data-talk="${k.id}" aria-label="Choose a chapter">${QUESTIONS.map((q, i) => `<option value="${i + 1}" ${i + 1 === talkCh ? 'selected' : ''}>Matthew ${i + 1}${k.completed.includes(i + 1) ? ' ✓' : ''}</option>`).join('')}</select></div>
-        <div class="pd-q" data-q="${k.id}">${talkHtml(talkCh)}</div></div>
+      <div class="pd-tabs" role="tablist"><button class="pd-tab active" data-pdtab="said" data-kid="${k.id}">💛 What they said${(k.journal || []).length - (k.journalSeen || 0) > 0 ? ` <span class="pd-new">${(k.journal || []).length - (k.journalSeen || 0)}</span>` : ''}</button><button class="pd-tab" data-pdtab="talk" data-kid="${k.id}">💬 Questions to reflect</button></div>
+      <div class="pd-pane" data-pane="said-${k.id}">${journalHtml(k)}</div>
+      <div class="pd-pane hidden" data-pane="talk-${k.id}"><div class="pd-talk"><div class="pd-talk-head"><b>Talk together</b><select data-talk="${k.id}" aria-label="Choose a chapter">${QUESTIONS.map((q, i) => `<option value="${i + 1}" ${i + 1 === talkCh ? 'selected' : ''}>Matthew ${i + 1}${k.completed.includes(i + 1) ? ' ✓' : ''}</option>`).join('')}</select></div>
+        <div class="pd-q" data-q="${k.id}">${talkHtml(talkCh)}</div></div></div>
     </section>`;
   }).join('');
   openModal(`${header('PARENTS', 'Parent dashboard')}<p>See how your kids are doing, hear what they shared, and use the questions to talk together. Ask, listen, and share what God is teaching you too!</p>${cards}<div class="pd-foot"><button id="pdChangePin" class="text-button">Change parent code</button><a class="text-button" href="qa.html" target="_blank" rel="noopener">All questions & answers →</a></div>`);
+  $('#modalCard').querySelectorAll('[data-pdtab]').forEach(b => b.onclick = () => { const kid = b.dataset.kid; $('#modalCard').querySelectorAll(`[data-kid="${kid}"]`).forEach(x => x.classList.toggle('active', x === b)); ['said', 'talk'].forEach(t => $('#modalCard').querySelector(`[data-pane="${t}-${kid}"]`).classList.toggle('hidden', t !== b.dataset.pdtab)); });
   $('#modalCard').querySelectorAll('[data-talk]').forEach(sel => sel.onchange = () => { $('#modalCard').querySelector(`[data-q="${sel.dataset.talk}"]`).innerHTML = talkHtml(Number(sel.value)); });
   $('#modalCard').querySelectorAll('[data-clip]').forEach(async el => { try { const b = await VoiceStore.get(el.dataset.clip); if (b) el.src = URL.createObjectURL(b); else el.replaceWith(Object.assign(document.createElement('small'), { textContent: '(recording not found on this device)' })); } catch { } });
   $('#modalCard').querySelectorAll('[data-deljournal]').forEach(b => b.onclick = () => { const [kid, id] = b.dataset.deljournal.split('|'), k = state.profiles.find(x => x.id === kid); if (!k || !confirmDelete(b)) return; k.journal = (k.journal || []).filter(e => e.id !== id); VoiceStore.del(id).catch(() => { }); save(); showParentDashboard(kid); });
@@ -590,7 +592,7 @@ function confirmDelete(b) { if (b.dataset.armed) return true; b.dataset.armed = 
 function journalHtml(k) {
   const j = (k.journal || []).slice().reverse(); if (!j.length) return `<div class="pd-journal empty"><b>💛 What ${escapeHtml(k.name)} shared</b><small>After reading, ${escapeHtml(k.name)} gets a question, a prayer break or a message to record for you. Their answers will show up here.</small></div>`;
   const fresh = j.length - (k.journalSeen || 0);
-  return `<div class="pd-journal"><div class="pd-journal-head"><b>💛 What ${escapeHtml(k.name)} shared</b>${fresh > 0 ? `<span class="pd-new">${fresh} new</span>` : ''}</div>${j.map((e, i) => `<div class="pd-entry ${i >= 4 ? 'more' : ''}"><small>${niceDay(e.date)} · after reading Matthew ${e.ch}</small><div class="pd-asked"><span>We asked them:</span><p>${escapeHtml(e.prompt)}</p></div><div class="pd-said"><span>They said:</span>${e.audio ? `<audio controls preload="metadata" data-clip="${e.id}"></audio>` : ''}${e.text ? `<p>“${escapeHtml(e.text)}”${e.text2 ? `<br>🙏 “${escapeHtml(e.text2)}”` : ''}</p>` : ''}</div><button class="text-button pd-del" data-deljournal="${k.id}|${e.id}">Delete</button></div>`).join('')}${j.length > 4 ? '<button class="text-button" data-morejournal>Show all</button>' : ''}</div>`;
+  return `<div class="pd-journal"><div class="pd-journal-head"><b>What ${escapeHtml(k.name)} shared after reading</b></div>${j.map((e, i) => `<div class="pd-entry ${i >= 4 ? 'more' : ''}"><small>${niceDay(e.date)} · after reading Matthew ${e.ch}</small><div class="pd-asked"><span>We asked them:</span><p>${escapeHtml(e.prompt)}</p></div><div class="pd-said"><span>They said:</span>${e.audio ? `<audio controls preload="metadata" data-clip="${e.id}"></audio>` : ''}${e.text ? `<p>“${escapeHtml(e.text)}”${e.text2 ? `<br>🙏 “${escapeHtml(e.text2)}”` : ''}</p>` : ''}</div><button class="text-button pd-del" data-deljournal="${k.id}|${e.id}">Delete</button></div>`).join('')}${j.length > 4 ? '<button class="text-button" data-morejournal>Show all</button>' : ''}</div>`;
 }
 function talkHtml(n) {
   const q = QUESTIONS[n - 1], t = PARENT_TALK[n] || [];
@@ -605,11 +607,15 @@ function showGrownUps() {
     return;
   }
   const p = profile();
-  openModal(`${header('TEST MODE', 'Grown-up tools')}<p>Test mode is on for this device. Every look, decoration, and Sky Run is unlocked, and quizzes can be skipped. Skipping a quiz <b>does</b> mark the chapter as read for the current explorer, so use a test explorer for that.</p>${p ? `<div class="builder-section"><b>Preview home stage (not saved)</b><div class="test-row">${HOME_NAMES.map((n, i) => `<button class="button small ${homeStage(p) === i ? 'dark' : 'secondary'}" data-stage="${i}">${n}</button>`).join('')}<button class="button small ghost" data-stage="-1">Real</button></div></div><div class="builder-section"><b>Reading</b><div class="test-row"><button id="testMap" class="button small secondary">Open any chapter</button><button id="testHomeQuiz" class="button small secondary">Try a home quiz</button></div></div>` : ''}<div class="builder-section"><b>Sky Run</b><p class="fineprint">Start Sky Run normally — test options (start at 2,000 for the UFO, unlimited hearts, Bible pages) appear on its start screen.</p></div><a class="button secondary wide" href="qa.html" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:block;margin-bottom:10px">Check all quiz questions (one page) →</a><button id="masterOff" class="button secondary wide">Turn off test mode</button>`);
+  openModal(`${header('TEST MODE', 'Grown-up tools')}<p>Test mode is on for this device. Every look, decoration, and Sky Run is unlocked, and quizzes can be skipped. Skipping a quiz <b>does</b> mark the chapter as read for the current explorer, so use a test explorer for that.</p>${p ? `<div class="builder-section"><b>Preview home stage (not saved)</b><div class="test-row">${HOME_NAMES.map((n, i) => `<button class="button small ${homeStage(p) === i ? 'dark' : 'secondary'}" data-stage="${i}">${n}</button>`).join('')}<button class="button small ghost" data-stage="-1">Real</button></div></div><div class="builder-section"><b>Preview streak flame (not saved)</b><div class="test-row"><input type="range" id="testFlame" min="0" max="30" step="1" value="${testView.streak ?? streak(p)}" style="flex:1"><b id="testFlameN">${testView.streak ?? streak(p)} days</b><button class="button small ghost" id="testFlameReal">Real</button></div><div class="test-row">${[0, 1, 3, 7, 14, 28].map(n => `<button class="button small secondary" data-flame="${n}">${n}</button>`).join('')}</div></div><div class="builder-section"><b>Reading</b><div class="test-row"><button id="testMap" class="button small secondary">Open any chapter</button><button id="testHomeQuiz" class="button small secondary">Try a home quiz</button></div></div>` : ''}<div class="builder-section"><b>Sky Run</b><p class="fineprint">Start Sky Run normally — test options (start at 2,000 for the UFO, unlimited hearts, Bible pages) appear on its start screen.</p></div><a class="button secondary wide" href="qa.html" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:block;margin-bottom:10px">Check all quiz questions (one page) →</a><button id="masterOff" class="button secondary wide">Turn off test mode</button>`);
   $('#modalCard').querySelectorAll('[data-stage]').forEach(b => b.onclick = () => { const v = Number(b.dataset.stage); testView.homeStage = v < 0 ? null : v; render(); showGrownUps(); });
+  const setFlame = v => { testView.streak = v; $('#testFlameN').textContent = v == null ? 'real' : `${v} days`; render(); };
+  $('#testFlame')?.addEventListener('input', e => setFlame(Number(e.target.value)));
+  $('#modalCard').querySelectorAll('[data-flame]').forEach(b => b.onclick = () => { $('#testFlame').value = b.dataset.flame; setFlame(Number(b.dataset.flame)); });
+  $('#testFlameReal')?.addEventListener('click', () => setFlame(null));
   $('#testMap')?.addEventListener('click', showChapters);
   $('#testHomeQuiz')?.addEventListener('click', () => { const sorted = [...p.completed].sort((a, b) => a - b); const ch = sorted.length >= 3 ? sorted.slice(0, 3) : [1, 2, 3]; startQuiz({ mode: 'review', chapters: ch, test: true }); });
-  $('#masterOff').onclick = () => { state.master = false; testView.homeStage = null; save(); closeModal(); render(); };
+  $('#masterOff').onclick = () => { state.master = false; testView.homeStage = null; testView.streak = null; save(); closeModal(); render(); };
 }
 
 // ---------- Sound settings ----------
