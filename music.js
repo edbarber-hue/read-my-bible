@@ -6,8 +6,8 @@ const SkyAudio = (() => {
   const TRACKS = {
     home: { file: 'music/bgm-home.mp3', name: 'Calm adventure' },
     rmb26: { file: 'music/rmb26-loop.mp3', name: 'Read My Bible song (no lyrics)' },
-    skyrun: { file: 'music/bgm-skyrun-dash.mp3', name: 'Sky Run', start: 4 * 4 * 60 / 146, loopStart: 16 * 4 * 60 / 146 },
-    ufo: { file: 'music/bgm-ufo-dash.mp3', name: 'UFO battle', start: 16 * 4 * 60 / 156, loopStart: 16 * 4 * 60 / 156 },
+    skyrun: { file: 'music/bgm-skyrun-gentle.mp3', name: 'Sky Run', start: 4 * 4 * 60 / 118, loopStart: 8 * 4 * 60 / 118 },
+    ufo: { file: 'music/bgm-ufo-gentle.mp3', name: 'UFO battle', start: 8 * 4 * 60 / 126, loopStart: 8 * 4 * 60 / 126 },
     win: { file: 'music/jingle-win.mp3', name: 'Victory' }
   };
   let ac = null, master, musicGain, sfxGain, chipGain;
