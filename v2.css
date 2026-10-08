@@ -417,3 +417,12 @@ body.playing{overflow:hidden}
 .a2hs-icon{flex:none;width:42px;height:42px;border-radius:12px;background:#fff;border:2px solid #ecd4b7;display:grid;place-items:center;color:#2f6fe4}
 .a2hs-txt{font-size:13px;color:#2f6fe4}
 .pd-install{margin-top:14px}
+.privacy-box{max-height:210px;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fff;border:2px solid #cfe3d8;border-radius:10px;padding:10px 14px;margin:10px 0;font-size:12.5px;line-height:1.5;color:#29464a}
+.privacy-box:focus-visible{outline:3px solid #faa731}
+.privacy-box h4{margin:2px 0 6px;font-size:15px}
+.privacy-box h5{margin:10px 0 3px;font-size:13px}
+.privacy-box p{margin:0 0 6px;color:#29464a!important;line-height:1.5!important}
+.privacy-box ul{margin:0 0 6px;padding-left:18px}
+.privacy-box a{color:#2f6fe4}
+.privacy-addr{font-weight:600}
+.consent-check span{font-size:12.5px;line-height:1.45}.consent-check span b{font-size:14px}
