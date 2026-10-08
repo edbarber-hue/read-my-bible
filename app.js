@@ -660,7 +660,7 @@ function showParentDashboard(focusId) {
   const cards = kids.map(k => {
     k.completed = k.completed || []; k.dailyPass = k.dailyPass || {};
     const read = Math.min(28, k.completed.length), s = streak(k), last = lastReadDay(k), lastCh = last ? k.dailyPass[last] : null;
-    const week = Array.from({ length: 7 }, (_, i) => addDays(todayKey(), i - 6)).map(d => `<span class="pd-day ${k.dailyPass[d] != null ? 'on' : ''}" title="${d}">${new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>`).join('');
+    const week = Array.from({ length: 7 }, (_, i) => addDays(todayKey(), i - new Date(`${todayKey()}T12:00:00`).getDay())).map(d => `<span class="pd-day ${k.dailyPass[d] != null ? 'on' : ''} ${d > todayKey() ? 'future' : ''}" title="${d}">${new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>`).join('');
     const talkCh = lastCh || (k.completed.length ? Math.max(...k.completed) : 1);
     return `<section class="pd-kid" id="pd-${k.id}">
       <div class="pd-head"><span class="profile-avatar ${k.gender === 'girl' ? 'girl' : 'boy'}"></span><div><b>${escapeHtml(fullName(k))}</b><small>Age ${k.age}${k.grade ? ' · ' + escapeHtml(k.grade) : ''} · ${k.age <= 6 ? 'reads one verse a day' : 'reads one chapter a day'}</small><button class="text-button pd-edit" data-editkid="${k.id}">Edit details & consent</button></div><span class="pd-streak">🔥 ${s} day${s === 1 ? '' : 's'} in a row</span></div>

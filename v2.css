@@ -386,3 +386,23 @@ body.playing{overflow:hidden}
 .country-pick input:checked+span{border-color:#59877d;background:#e3f2ea;box-shadow:0 0 0 2px #59877d inset}
 .country-pick input:focus-visible+span{outline:3px solid #faa731}
 @media (max-width:520px){.country-pick{grid-template-columns:1fr 1fr}}
+
+/* ---------- Phone fixes: parent code box, dashboard header, top bar ---------- */
+.modal-card .field input,.modal-card .field select,.modal-card .field textarea{width:100%;box-sizing:border-box;min-width:0}
+.pd-head{flex-wrap:wrap}
+.pd-head>div{flex:1 1 160px;min-width:0}
+.pd-head .profile-avatar{flex:none}
+.pd-week{flex-wrap:wrap}
+.pd-week small{white-space:nowrap}
+@media (max-width:480px){
+  .pd-streak{margin-left:0}
+  .topbar{gap:6px}
+  .brand{min-width:0;flex:1 1 auto}
+  .brand img:not(.brand-logo){width:92px;height:auto}
+  .brand-sub{display:none}
+  .top-actions{gap:6px;flex:none}
+  .top-actions .button.small{padding:7px 9px}
+  .settings-button{width:34px;height:34px}
+}
+.pd-day.future{opacity:.45}
+.field textarea{font-family:inherit}
