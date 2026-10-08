@@ -116,8 +116,8 @@ function setupTurntable() {
 }
 
 // ---------- Modal + toast ----------
-function openModal(html) { $('#modalCard').innerHTML = html; $('#modalLayer').classList.remove('hidden'); $('#modalCard').scrollTop = 0; $('#modalCard').querySelector('[data-close]')?.addEventListener('click', closeModal); }
-function closeModal() { $('#modalLayer').classList.add('hidden'); stopNarration(); }
+function openModal(html) { if ($('#modalLayer').classList.contains('hidden')) SkyAudio.sfx('open'); $('#modalCard').innerHTML = html; $('#modalLayer').classList.remove('hidden'); $('#modalCard').scrollTop = 0; $('#modalCard').querySelector('[data-close]')?.addEventListener('click', closeModal); }
+function closeModal() { $('#modalLayer').classList.add('hidden'); stopNarration(); if ($('#gameLayer').classList.contains('hidden') && profile()) SkyAudio.scene('home'); }
 const header = (kicker, title) => `<div class="modal-head"><div><div class="eyebrow">${kicker}</div><h2>${title}</h2></div><button class="icon-button" data-close aria-label="Close">×</button></div>`;
 function toast(msg) { const n = document.createElement('div'); n.className = 'toast'; n.textContent = msg; document.body.append(n); setTimeout(() => n.remove(), 2800); }
 
@@ -287,7 +287,7 @@ function playDeviceVoice(text, age, button) {
 async function showReading(n) {
   const p = profile(); if (!p) return;
   if (!isMaster() && (n !== todayChapter(p) || (passedToday(p) && !catchUpOpen(p)))) { toast(passedToday(p) ? 'Come back tomorrow to read your Bible again!' : 'Read today’s chapter first'); return; }
-  stopNarration(); readingChapter = n; passageText = '';
+  stopNarration(); readingChapter = n; passageText = ''; SkyAudio.scene('reading'); SkyAudio.sfx('page');
   const ref = netPassage(n, p);
   openModal(`${header('READ YOUR BIBLE', escapeHtml(ref))}<p>${escapeHtml(QUESTIONS[n - 1].title)} · (<a href="https://netbible.org" target="_blank" rel="noopener">NET</a>)</p><div id="passageBox" class="passage-box">Loading…</div><div class="passage-actions"><button id="listenButton" class="button secondary" disabled>▶ Read aloud</button></div><div class="notice">Read to the end, then answer three questions. A grown-up can help younger readers.</div><button id="quizButton" class="button primary wide" disabled>Read to the end to start the quiz</button>${isMaster() ? '<button id="skipQuiz" class="button ghost wide test-button">Test mode: skip quiz and pass</button>' : ''}`);
   $('#quizButton').onclick = () => startQuiz({ mode: 'daily', chapter: n });
@@ -330,7 +330,7 @@ function renderQuestion() {
   $('#modalCard').querySelectorAll('[data-answer]').forEach(b => b.onclick = () => {
     if (quiz.picked >= 0) return;
     quiz.picked = Number(b.dataset.answer);
-    const right = q.answers[quiz.picked] === q.correct; if (right) quiz.score++;
+    const right = q.answers[quiz.picked] === q.correct; if (right) quiz.score++; SkyAudio.sfx(right ? 'correct' : 'wrong');
     $('#modalCard').querySelectorAll('[data-answer]').forEach(x => { const i = Number(x.dataset.answer); if (q.answers[i] === q.correct) x.classList.add('correct'); else if (i === quiz.picked) x.classList.add('wrong'); x.disabled = true; });
     $('#quizFeedback').textContent = right ? 'Correct! Moving on…' : `The answer is: ${q.correct}. Moving on…`;
     $('#nextQuestion').disabled = false; setTimeout(advance, 1200);
@@ -357,6 +357,7 @@ function finishQuiz() {
   const finished = p.completed.length === 28 && isNew;
   if (finished) p.congratsShown = true;
   save(); render();
+  SkyAudio.jingle(); if (streak(p) > 1) setTimeout(() => SkyAudio.sfx('flame'), 900);
   const homeReady = homeQuizReady(p);
   openModal(`${header(finished ? 'MATTHEW COMPLETE' : 'CHAPTER COMPLETE', finished ? 'You finished Matthew!' : 'Great reading!')}${reward ? `<div class="reward-celebration">${cosmeticArt(reward)}</div><h3 style="text-align:center">Unlocked: ${reward.name}</h3>` : '<h3 style="text-align:center">You remembered it!</h3>'}<p style="text-align:center">${finished ? 'You read all 28 chapters! Tomorrow you’ll start again at Matthew 1 — every reread shows you something new.' : catchUpOpen(p) ? `All three answers right! Sky Run is open. Catch-up time: you can read Matthew ${nextChapter(p)} right now too!` : 'All three answers right! Sky Run is open — fly as much as you like today. Come back tomorrow to read your Bible again.'}</p>${homeReady ? '<div class="notice">Your home bar is full! Take the home quiz to upgrade your home.</div>' : ''}<div class="two-col">${reward ? '<button id="rewardNext" class="button secondary">Try it on</button>' : homeReady ? '<button id="homeQuizNext" class="button secondary">Home quiz</button>' : '<button id="closeDone" class="button secondary">Done</button>'}<button id="finishNext" class="button primary">Play Sky Run</button></div>`);
   $('#rewardNext')?.addEventListener('click', () => showRewards(reward.type, reward.id));
@@ -370,7 +371,7 @@ function showBonus(p, ch, done) {
   const r = REFLECT[ch], little = p.age <= 6, row = little ? r.little : r.big, answers = shuffle(row.slice(1));
   openModal(`${header('BONUS ⭐ THINK ABOUT IT', 'A question for your heart')}<p class="bonus-note">Free extra! Matthew ${ch <= 3 ? '1–3' : ch === 28 ? '28' : `${ch - 2}–${ch}`} · ${escapeHtml(r.title)}</p><h3 class="quiz-prompt">${escapeHtml(row[0])}</h3><div class="quiz-options">${answers.map((x, i) => `<button type="button" class="quiz-option" data-b="${i}">${escapeHtml(x)}</button>`).join('')}</div><div id="bonusAfter"></div>`);
   $('#modalCard').querySelectorAll('[data-b]').forEach(b => b.onclick = () => {
-    const pick = answers[Number(b.dataset.b)], best = pick === row[1];
+    const pick = answers[Number(b.dataset.b)], best = pick === row[1]; SkyAudio.sfx(best ? 'bonus' : 'correct');
     $('#modalCard').querySelectorAll('[data-b]').forEach(x => { x.disabled = true; if (answers[Number(x.dataset.b)] === row[1]) x.classList.add('correct'); });
     if (best) { p.reflections = p.reflections || {}; p.reflections[ch] = true; save(); }
     const typeBox = !little && r.bigType && best;
@@ -399,7 +400,7 @@ function startHomeQuiz() {
   $('#beginHomeQuiz').onclick = () => startQuiz({ mode: 'review', chapters });
 }
 function finishHomeQuiz(p) {
-  p.homeStage = Math.min(3, p.homeStage + 1); p.homeInside = false; save(); render();
+  p.homeStage = Math.min(3, p.homeStage + 1); p.homeInside = false; save(); render(); SkyAudio.jingle();
   const name = HOME_NAMES[p.homeStage];
   openModal(`${header('NEW HOME', `Welcome to your ${name.toLowerCase()}!`)}<div class="home-reveal stage-${HOME_CLASSES[p.homeStage]}"></div><p style="text-align:center">You moved up from the ${HOME_NAMES[p.homeStage - 1].toLowerCase()}! New decorations are ready to place${CARS.length ? ', and a new car is parked outside' : ''}.</p><button id="homeDone" class="button primary wide">See my ${name.toLowerCase()}</button>`);
   $('#homeDone').onclick = () => { closeModal(); $('#homeBase').scrollIntoView({ behavior: 'smooth' }); };
@@ -476,7 +477,7 @@ function showRewards(type = 'outfit', previewId = null) {
   $('#modalCard').querySelectorAll('[data-preview]').forEach(b => b.onclick = () => showRewards(type, b.dataset.preview));
   $('#equipLook')?.addEventListener('click', () => {
     if (!unlocked) return;
-    wardrobe(p)[type] = equipped ? null : current.id;
+    SkyAudio.sfx('equip'); wardrobe(p)[type] = equipped ? null : current.id;
     p.featuredCosmetic = equipped ? null : current.id; p.showHairFocus = false;
     save(); render(); showRewards(type, current.id);
   });
@@ -511,7 +512,34 @@ function showGrownUps() {
   $('#masterOff').onclick = () => { state.master = false; testView.homeStage = null; save(); closeModal(); render(); };
 }
 
+// ---------- Sound settings ----------
+function showSettings() {
+  const s = SkyAudio.settings, T = SkyAudio.TRACKS;
+  const sw = (id, on, label) => `<label class="setting-row"><span>${label}</span><input type="checkbox" id="${id}" ${on ? 'checked' : ''} class="switch"></label>`;
+  openModal(`${header('SETTINGS', 'Sound & music')}<p>These settings are saved on this device.</p>
+    ${sw('setMusic', s.music, '🎵 Music')}
+    <label class="setting-row"><span>Music volume</span><input type="range" id="setMusicVol" min="0" max="1" step="0.05" value="${s.musicVol}"></label>
+    ${sw('setSfx', s.sfx, '🔔 Sound effects')}
+    <label class="setting-row"><span>Effects volume</span><input type="range" id="setSfxVol" min="0" max="1" step="0.05" value="${s.sfxVol}"></label>
+    <label class="field">Home music<select id="setHome"><option value="home">${T.home.name}</option><option value="rmb26">${T.rmb26.name}</option><option value="off">Off</option></select></label>
+    <label class="field">Sky Run music<select id="setRun"><option value="skyrun">Sky Run adventure</option><option value="retro">Retro arcade</option></select></label>
+    <button id="setDone" class="button primary wide">Done</button>`);
+  $('#setHome').value = s.homeTrack; $('#setRun').value = s.runTrack;
+  const upd = () => { SkyAudio.update({ music: $('#setMusic').checked, sfx: $('#setSfx').checked, musicVol: Number($('#setMusicVol').value), sfxVol: Number($('#setSfxVol').value), homeTrack: $('#setHome').value, runTrack: $('#setRun').value }); window.paintMute?.(); };
+  ['#setMusic', '#setSfx', '#setMusicVol', '#setSfxVol'].forEach(k => $(k).oninput = upd);
+  $('#setSfx').onchange = () => { upd(); SkyAudio.sfx('tap'); };
+  $('#setHome').onchange = () => { upd(); SkyAudio.scene('home'); };
+  $('#setRun').onchange = upd;
+  $('#setDone').onclick = closeModal;
+}
+
 // ---------- Wiring ----------
+$('#settingsButton').onclick = showSettings;
+document.addEventListener('pointerdown', e => {
+  SkyAudio.unlock();
+  if (!window.__musicStarted && profile() && $('#gameLayer').classList.contains('hidden')) { window.__musicStarted = true; if ($('#modalLayer').classList.contains('hidden')) SkyAudio.scene('home'); }
+  if (e.target.closest('.button, .text-button, .wardrobe-tab, .cosmetic-card, .decor-choice, .hairstyle-choice, .builder-choice, .chapter-tile')) SkyAudio.sfx('tap');
+}, true);
 $('#profileButton').onclick = showProfiles;
 $('#primaryButton').onclick = () => profile() ? $('#dashboard').scrollIntoView({ behavior: 'smooth' }) : showProfiles();
 $('#howButton').onclick = showHow;
@@ -535,7 +563,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal
   });
   const end = () => {
     if (!drag) return; const p = profile(), key = drag.dataset.kind === 'exterior' ? 'outdoorPositions' : 'decorPositions';
-    p[key] = p[key] || {}; p[key][drag.dataset.item] = { x: parseFloat(drag.style.left) || 50, y: parseFloat(drag.style.top) || 75 }; save(); drag = null;
+    SkyAudio.sfx('place'); p[key] = p[key] || {}; p[key][drag.dataset.item] = { x: parseFloat(drag.style.left) || 50, y: parseFloat(drag.style.top) || 75 }; save(); drag = null;
   };
   scene.addEventListener('pointerup', end); scene.addEventListener('pointercancel', end);
 })();

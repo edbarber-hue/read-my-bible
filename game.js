@@ -51,7 +51,7 @@ function showStartCard() {
   $('#gameOverlay').querySelectorAll('[data-opt]').forEach(c => c.onchange = () => testOpts[c.dataset.opt] = c.checked);
   $('#startRunButton').onclick = startRun;
 }
-function closeGame() { SkyAudio.stop(); if (game) game.running = false; cancelAnimationFrame(frameId); hold = false; $('#gameLayer').classList.add('hidden'); document.body.classList.remove('playing'); render(); }
+function closeGame() { SkyAudio.scene('home'); if (game) game.running = false; cancelAnimationFrame(frameId); hold = false; $('#gameLayer').classList.add('hidden'); document.body.classList.remove('playing'); render(); }
 
 // ---------- Run ----------
 function startRun() {
@@ -72,7 +72,7 @@ function startRun() {
   frameId = requestAnimationFrame(loop);
 }
 function endRun() {
-  SkyAudio.stop(); SkyAudio.sfx('over');
+  SkyAudio.scene('none'); SkyAudio.sfx('over');
   const p = profile(); game.running = false; cancelAnimationFrame(frameId); hold = false;
   const points = Math.floor(game.score);
   const best = points > (p.best || 0);
@@ -179,7 +179,7 @@ function step(dt) {
     const u = g.ufo;
     if (u && !s.hit && !u.leaving && Math.abs(s.x - u.x) < 62 && Math.abs(s.y - u.y) < 34) {
       s.hit = true; u.hp--; u.flash = 12; ring(s.x, s.y, '#fff3a6', 50); burst(s.x, s.y, '#fff3a6', 10, 4);
-      if (u.hp <= 0) { burst(u.x, u.y, '#7dff9b', 34, 7); burst(u.x, u.y, '#ffffff', 20, 5); ring(u.x, u.y, '#7dff9b', 140); g.score += 300; g.ufosBeaten++; popup('UFO cleared! +300', u.x, u.y - 50, '#c8ffd4'); g.ufo = null; g.nextUfo = g.score + 1500; g.shake = 10; }
+      if (u.hp <= 0) { burst(u.x, u.y, '#7dff9b', 34, 7); burst(u.x, u.y, '#ffffff', 20, 5); ring(u.x, u.y, '#7dff9b', 140); g.score += 300; g.ufosBeaten++; popup('UFO cleared! +300', u.x, u.y - 50, '#c8ffd4'); g.ufo = null; g.nextUfo = g.score + 1500; g.shake = 10; SkyAudio.scene('run'); }
     }
   }
   // UFO
@@ -209,7 +209,7 @@ function throwPage() {
 }
 function spawnUfo() {
   game.ufo = { x: 1080, y: 150, tx: 790, hp: game.little ? 4 : 6, max: game.little ? 4 : 6, fire: 110, life: 1600, phase: 0, flash: 0, leaving: false };
-  popup('UFO incoming!', 640, 120, '#c8ffd4'); SkyAudio.sfx('ufo');
+  popup('UFO incoming!', 640, 120, '#c8ffd4'); SkyAudio.sfx('ufo'); SkyAudio.scene('ufo');
   game.nextPowerT = Math.min(game.nextPowerT, game.t + 90);
 }
 function stepUfo(dt, py, pr) {
@@ -217,7 +217,7 @@ function stepUfo(dt, py, pr) {
   if (u.life <= 0 && !u.leaving) { u.leaving = true; u.tx = 1150; popup('The UFO flew away!', 700, 110); }
   u.x += (u.tx - u.x) * .03 * dt;
   u.y = 270 + Math.sin(u.phase) * 160;
-  if (u.leaving) { if (u.x > 1100) { game.ufo = null; game.nextUfo = game.score + 1200; } return; }
+  if (u.leaving) { if (u.x > 1100) { game.ufo = null; game.nextUfo = game.score + 1200; SkyAudio.scene('run'); } return; }
   if (u.x < 860 && (u.fire -= dt) <= 0) {
     const sx = u.x - 30, sy = u.y + 22, d = Math.hypot(PX - sx, py - sy) || 1, v = game.little ? 5 : 6.5;
     SkyAudio.sfx('laser'); game.lasers.push({ x: sx, y: sy, vx: (PX - sx) / d * v, vy: (py - sy) / d * v });
@@ -476,5 +476,5 @@ window.addEventListener('keydown', e => { if (e.code === 'Space' && !$('#gameLay
 window.addEventListener('keyup', e => { if (e.code === 'Space') hold = false; });
 $('#closeGameButton').onclick = closeGame;
 const muteBtn = $('#muteButton'), paintMute = () => { muteBtn.textContent = SkyAudio.muted ? '🔇' : '♪'; muteBtn.classList.toggle('off', SkyAudio.muted); };
-muteBtn.onclick = () => { SkyAudio.toggleMute(); paintMute(); }; paintMute();
+muteBtn.onclick = () => { SkyAudio.toggleMute(); paintMute(); if (!SkyAudio.muted && game?.running) SkyAudio.scene(game.ufo ? 'ufo' : 'run'); }; paintMute(); window.paintMute = paintMute;
 render();
