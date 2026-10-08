@@ -497,6 +497,52 @@ function showCustomize() {
 }
 
 // ---------- Grown-ups / test mode ----------
+// ---------- Parents ----------
+const PIN_KEY = 'rmb-parent-pin';
+const getPin = () => { try { return localStorage.getItem(PIN_KEY); } catch { return null; } };
+function showParentsGate() {
+  const pin = getPin();
+  const body = pin
+    ? `<p>Enter your 4-digit parent code to see your kids’ progress.</p><label class="field">Parent code<input id="pinIn" type="password" inputmode="numeric" maxlength="4" autocomplete="off" class="pin-input"></label><button id="pinGo" class="button primary wide">Open parent dashboard</button><button id="pinForgot" class="text-button" style="width:100%">Forgot the code?</button>`
+    : `<p>Create a 4-digit parent code. Kids won’t be able to open this area without it. It’s saved on this device only.</p><div class="two-col"><label class="field">New code<input id="pinNew" type="password" inputmode="numeric" maxlength="4" autocomplete="off" class="pin-input"></label><label class="field">Type it again<input id="pinNew2" type="password" inputmode="numeric" maxlength="4" autocomplete="off" class="pin-input"></label></div><button id="pinSet" class="button primary wide">Save code and continue</button>`;
+  openModal(`${header('PARENTS', 'Parent access')}${body}`);
+  if (pin) {
+    const go = () => { const v = $('#pinIn').value.trim(); if (v === pin) showParentDashboard(); else if (v === MASTER_CODE) { state.master = true; save(); render(); showGrownUps(); } else { toast('That code isn’t right'); $('#pinIn').value = ''; } };
+    $('#pinGo').onclick = go; $('#pinIn').onkeydown = e => { if (e.key === 'Enter') go(); }; $('#pinIn').focus();
+    $('#pinForgot').onclick = () => openModal(`${header('PARENTS', 'Reset the parent code')}<p>To keep this area safe from curious kids, resetting needs the Favor Kids team code. Ask your Favor Kids leader, or remove and re-add the site on this device.</p><label class="field">Favor Kids team code<input id="pinReset" type="password" inputmode="numeric" maxlength="8" class="pin-input"></label><button id="pinResetGo" class="button primary wide">Reset parent code</button>`) || ($('#pinResetGo').onclick = () => { if ($('#pinReset').value.trim() === MASTER_CODE) { try { localStorage.removeItem(PIN_KEY); } catch { } toast('Parent code removed — create a new one'); showParentsGate(); } else toast('That code isn’t right'); });
+  } else {
+    $('#pinSet').onclick = () => { const a = $('#pinNew').value.trim(), b = $('#pinNew2').value.trim(); if (!/^\d{4}$/.test(a)) { toast('Use 4 numbers'); return; } if (a !== b) { toast('The two codes don’t match'); return; } if (a === MASTER_CODE) { toast('Please choose a different code'); return; } try { localStorage.setItem(PIN_KEY, a); } catch { } toast('Parent code saved'); showParentDashboard(); };
+  }
+}
+function lastReadDay(p) { const days = Object.keys(p.dailyPass || {}).sort(); return days[days.length - 1] || null; }
+function niceDay(key) { if (!key) return 'Not yet'; const t = todayKey(); if (key === t) return 'Today'; if (key === addDays(t, -1)) return 'Yesterday'; return new Date(`${key}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); }
+function showParentDashboard(focusId) {
+  const kids = state.profiles; if (!kids.length) { openModal(`${header('PARENTS', 'Parent dashboard')}<div class="notice">No explorers on this device yet. Create one from Profiles.</div>`); return; }
+  const cards = kids.map(k => {
+    k.completed = k.completed || []; k.dailyPass = k.dailyPass || {};
+    const read = Math.min(28, k.completed.length), s = streak(k), last = lastReadDay(k), lastCh = last ? k.dailyPass[last] : null;
+    const week = Array.from({ length: 7 }, (_, i) => addDays(todayKey(), i - 6)).map(d => `<span class="pd-day ${k.dailyPass[d] != null ? 'on' : ''}" title="${d}">${new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>`).join('');
+    const talkCh = lastCh || (k.completed.length ? Math.max(...k.completed) : 1);
+    return `<section class="pd-kid" id="pd-${k.id}">
+      <div class="pd-head"><span class="profile-avatar ${k.gender === 'girl' ? 'girl' : 'boy'}"></span><div><b>${escapeHtml(k.name)}</b><small>Age ${k.age} · ${k.age <= 6 ? 'reads one verse a day' : 'reads one chapter a day'}</small></div><span class="pd-streak">🔥 ${s} day${s === 1 ? '' : 's'}</span></div>
+      <div class="pd-progress"><div class="book-progress-top"><span>Book of Matthew</span><b>${read} / 28 chapters</b></div><div class="book-track"><span style="width:${read / 28 * 100}%"></span></div></div>
+      <div class="pd-stats"><div><small>Last read</small><b>${niceDay(last)}${lastCh ? ` · Matthew ${lastCh}` : ''}</b></div><div><small>Home</small><b>${HOME_NAMES[Math.min(3, k.homeStage || 0)]}</b></div><div><small>⭐ Deep Thinker</small><b>${Object.keys(k.reflections || {}).length}</b></div><div><small>Best Sky Run</small><b>${k.best || 0}</b></div></div>
+      <div class="pd-week"><small>Last 7 days</small><div>${week}</div></div>
+      ${k.shareWith ? `<div class="notice">💬 ${escapeHtml(k.name)} wants to tell <b>${escapeHtml(k.shareWith)}</b> about Jesus. Help them make a plan this week!</div>` : ''}
+      <div class="pd-talk"><div class="pd-talk-head"><b>Talk together</b><select data-talk="${k.id}" aria-label="Choose a chapter">${QUESTIONS.map((q, i) => `<option value="${i + 1}" ${i + 1 === talkCh ? 'selected' : ''}>Matthew ${i + 1}${k.completed.includes(i + 1) ? ' ✓' : ''}</option>`).join('')}</select></div>
+        <div class="pd-q" data-q="${k.id}">${talkHtml(talkCh)}</div></div>
+    </section>`;
+  }).join('');
+  openModal(`${header('PARENTS', 'Parent dashboard')}<p>See how your kids are doing and use the questions to talk about what they read. Ask, listen, and share what God is teaching you too!</p>${cards}<div class="pd-foot"><button id="pdChangePin" class="text-button">Change parent code</button><a class="text-button" href="qa.html" target="_blank" rel="noopener">All questions & answers →</a></div>`);
+  $('#modalCard').querySelectorAll('[data-talk]').forEach(sel => sel.onchange = () => { $('#modalCard').querySelector(`[data-q="${sel.dataset.talk}"]`).innerHTML = talkHtml(Number(sel.value)); });
+  $('#pdChangePin').onclick = () => { try { localStorage.removeItem(PIN_KEY); } catch { } showParentsGate(); };
+  if (focusId) document.getElementById('pd-' + focusId)?.scrollIntoView();
+}
+function talkHtml(n) {
+  const q = QUESTIONS[n - 1], t = PARENT_TALK[n] || [];
+  return `<p class="pd-chapter">Matthew ${n} · ${escapeHtml(q.title)} · <span>verse for little ones: ${n}:${q.verse}</span></p><ol>${t.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>`;
+}
+
 function showGrownUps() {
   if (!isMaster()) {
     openModal(`${header('GROWN-UPS', 'Enter the test code')}<p>For parents and testers. The code turns on test mode on this device.</p><label class="field">Code<input id="masterCode" inputmode="numeric" maxlength="8" autocomplete="off"></label><button id="masterGo" class="button primary wide">Unlock test mode</button>`);
@@ -547,7 +593,8 @@ $('#readTodayButton').onclick = () => { const p = profile(); if (p) showReading(
 $('#mapButton').onclick = showChapters;
 $('#customizeButton').onclick = showCustomize;
 $('#playButton').onclick = () => openGame();
-$('#grownUpsButton').onclick = showGrownUps;
+$('#grownUpsButton').onclick = () => isMaster() ? showGrownUps() : showParentsGate();
+$('#parentsButton').onclick = showParentsGate;
 $('#homeQuizButton').onclick = startHomeQuiz;
 $('#homeViewButton').onclick = () => { const p = profile(); if (p) { p.homeInside = !p.homeInside; save(); renderHome(p); } };
 $('#homeDecorButton').onclick = showHomeDecor;
