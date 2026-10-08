@@ -6,8 +6,8 @@ const SkyAudio = (() => {
   const TRACKS = {
     home: { file: 'music/bgm-home.mp3', name: 'Calm adventure' },
     rmb26: { file: 'music/rmb26-loop.mp3', name: 'Read My Bible song (no lyrics)' },
-    skyrun: { file: 'music/bgm-skyrun.mp3', name: 'Sky Run' },
-    ufo: { file: 'music/bgm-ufo.mp3', name: 'UFO battle' },
+    skyrun: { file: 'music/bgm-skyrun-dash.mp3', name: 'Sky Run', start: 4 * 4 * 60 / 146, loopStart: 16 * 4 * 60 / 146 },
+    ufo: { file: 'music/bgm-ufo-dash.mp3', name: 'UFO battle', start: 16 * 4 * 60 / 156, loopStart: 16 * 4 * 60 / 156 },
     win: { file: 'music/jingle-win.mp3', name: 'Victory' }
   };
   let ac = null, master, musicGain, sfxGain, chipGain;
@@ -34,8 +34,8 @@ const SkyAudio = (() => {
     if (current?.id === id) return;
     const buf = await load(id); if (!buf || wanted !== id) return;
     const old = current, src = ac.createBufferSource(), g = ac.createGain();
-    src.buffer = buf; src.loop = loop; if (loop) { src.loopStart = 0.026; src.loopEnd = buf.duration - 0.03; }   // skip mp3 encoder padding for a gapless loop g.gain.setValueAtTime(0.0001, ac.currentTime); g.gain.exponentialRampToValueAtTime(1, ac.currentTime + fade);
-    src.connect(g); g.connect(musicGain); src.start();
+    src.buffer = buf; src.loop = loop; if (loop) { src.loopStart = TRACKS[id].loopStart || 0.026; src.loopEnd = buf.duration - 0.03; }   // skip mp3 encoder padding for a gapless loop g.gain.setValueAtTime(0.0001, ac.currentTime); g.gain.exponentialRampToValueAtTime(1, ac.currentTime + fade);
+    src.connect(g); g.connect(musicGain); src.start(0, TRACKS[id].start || 0);
     current = { id, src, g };
     if (old) { old.g.gain.setTargetAtTime(0.0001, ac.currentTime, fade / 3); setTimeout(() => { try { old.src.stop(); } catch { } }, fade * 1500); }
     if (!loop) src.onended = () => { if (current?.src === src) current = null; };
