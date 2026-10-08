@@ -31,11 +31,10 @@ const PARENT_TALK = {
   27: ['Jesus died on the cross because he loves you. How does it feel to be loved that much?', 'Share together: how can we show each other that kind of love this week?'],
   28: ['Jesus is alive and with you always! What do you want to tell Jesus today?', 'Share together: who could we tell about Jesus? Pray for them together right now.']
 };
-// "Heart moments" after each chapter: kids can type or record a message (younger kids record by default).
+// "Heart moments" after each chapter (not on chapter 28 — that day the quiz's bonus question asks who they want to share Jesus with): kids can type or record a message (younger kids record by default).
 // kind: 'type' (one answer), 'pray' (person + what to pray), 'record' (a voice message for parents).
 const HEART_MOMENTS = [
   { kind: 'record', title: 'Message for your parents', prompt: 'What’s one thing you’re grateful to your parents for? Record a message to tell them!' },
-  { kind: 'type', title: 'Share Jesus', prompt: 'Who do you want to share Jesus with?', placeholder: 'Their name' },
   { kind: 'record', title: 'Message for your parents', prompt: 'What’s one thing you love about Jesus? Tell your parents!' },
   { kind: 'pray', title: 'PRAY BREAK!', prompt: 'One person you want to pray for:', prompt2: 'What do you want to pray for them?' },
   { kind: 'record', title: 'Message for your parents', prompt: 'What’s one thing you love about your parents? Record it for them!' },

@@ -315,6 +315,8 @@ async function showReading(n) {
 // ---------- Quizzes (daily + home review) ----------
 const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
 const toQuestion = row => ({ prompt: row[0], correct: row[1], answers: shuffle(row.slice(1)) });
+// The bonus reflection is question 4 of the quiz on chapters 3, 6, 9 … 27 and 28 (and in the matching home quiz).
+function quizBonusCh() { if (!quiz || typeof REFLECT === 'undefined') return 0; const ch = quiz.mode === 'review' ? Math.max(...quiz.chapters) : quiz.chapter; return REFLECT[ch] ? ch : 0; }
 function startQuiz(opts) {
   stopNarration();
   const p = profile(), key = p.age <= 6 ? 'little' : 'big';
@@ -326,8 +328,8 @@ function renderQuestion() {
   const q = quiz.questions[quiz.index], shown = quiz.index, runId = quiz.runId;
   quiz.picked = -1; quiz.advancing = false;
   const title = quiz.mode === 'review' ? 'Home quiz' : `Matthew ${quiz.chapter}`;
-  openModal(`${header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', title)}<div class="quiz-top"><span>QUESTION ${shown + 1} OF 3${quiz.mode === 'review' ? ` · MATTHEW ${quiz.chapters[shown]}` : ''}</span><span>${quiz.score} correct so far</span></div><h3 class="quiz-prompt">${escapeHtml(q.prompt)}</h3><div class="quiz-options">${q.answers.map((a, i) => `<button type="button" class="quiz-option" data-answer="${i}">${escapeHtml(a)}</button>`).join('')}</div><p id="quizFeedback" role="status" class="quiz-feedback"></p><button id="nextQuestion" type="button" class="button primary wide" disabled>${shown === 2 ? 'See results' : 'Next question'}</button>`);
-  const advance = () => { if (quiz.advancing || quiz.picked < 0 || quiz.index !== shown || quiz.runId !== runId) return; quiz.advancing = true; if (quiz.index < 2) { quiz.index++; renderQuestion(); } else finishQuiz(); };
+  openModal(`${header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', title)}<div class="quiz-top"><span>QUESTION ${shown + 1} OF ${quizBonusCh() ? 4 : 3}${quiz.mode === 'review' ? ` · MATTHEW ${quiz.chapters[shown]}` : ''}</span><span>${quiz.score} correct so far</span></div><h3 class="quiz-prompt">${escapeHtml(q.prompt)}</h3><div class="quiz-options">${q.answers.map((a, i) => `<button type="button" class="quiz-option" data-answer="${i}">${escapeHtml(a)}</button>`).join('')}</div><p id="quizFeedback" role="status" class="quiz-feedback"></p><button id="nextQuestion" type="button" class="button primary wide" disabled>${shown === 2 ? 'See results' : 'Next question'}</button>`);
+  const advance = () => { if (quiz.advancing || quiz.picked < 0 || quiz.index !== shown || quiz.runId !== runId) return; quiz.advancing = true; if (quiz.index < 2) { quiz.index++; renderQuestion(); } else if (quizBonusCh() && quiz.score === 3 && !quiz.bonusDone) { quiz.bonusDone = true; showBonus(profile(), quizBonusCh(), finishQuiz, true); } else finishQuiz(); };
   $('#modalCard').querySelectorAll('[data-answer]').forEach(b => b.onclick = () => {
     if (quiz.picked >= 0) return;
     quiz.picked = Number(b.dataset.answer);
@@ -347,9 +349,7 @@ function finishQuiz() {
     return;
   }
   // Free bonus reflection question every 3rd chapter (and in the home quiz). It never blocks progress.
-  const bonusCh = quiz.mode === 'review' ? Math.max(...quiz.chapters) : quiz.chapter;
-  if (typeof REFLECT !== 'undefined' && REFLECT[bonusCh] && !quiz.bonusDone) { quiz.bonusDone = true; showBonus(p, bonusCh, finishQuiz); return; }
-  if (quiz.mode === 'daily' && !quiz.test && !quiz.heartDone) { quiz.heartDone = true; showHeartMoment(p, quiz.chapter, finishQuiz); return; }
+  if (quiz.mode === 'daily' && !quiz.test && !quiz.heartDone && heartMomentFor(quiz.chapter)) { quiz.heartDone = true; showHeartMoment(p, quiz.chapter, finishQuiz); return; }
   if (quiz.mode === 'review' && quiz.test) { openModal(`${header('TEST MODE', 'Home quiz passed')}<p>In normal play this would upgrade the home. Nothing was saved.</p><button class="button primary wide" data-close>Close</button>`); return; }
   if (quiz.mode === 'review') return finishHomeQuiz(p);
   const n = quiz.chapter, isNew = !completed(p, n);
@@ -369,9 +369,9 @@ function finishQuiz() {
   $('#finishNext').onclick = () => { closeModal(); openGame(); };
 }
 
-function showBonus(p, ch, done) {
+function showBonus(p, ch, done, inQuiz) {
   const r = REFLECT[ch], little = p.age <= 6, row = little ? r.little : r.big, answers = shuffle(row.slice(1));
-  openModal(`${header('BONUS ⭐ THINK ABOUT IT', 'A question for your heart')}<p class="bonus-note">Free extra! Matthew ${ch <= 3 ? '1–3' : ch === 28 ? '28' : `${ch - 2}–${ch}`} · ${escapeHtml(r.title)}</p><h3 class="quiz-prompt">${escapeHtml(row[0])}</h3><div class="quiz-options">${answers.map((x, i) => `<button type="button" class="quiz-option" data-b="${i}">${escapeHtml(x)}</button>`).join('')}</div><div id="bonusAfter"></div>`);
+  openModal(`${inQuiz ? header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', quiz.mode === 'review' ? 'Home quiz' : `Matthew ${quiz.chapter}`) + `<div class="quiz-top"><span>QUESTION 4 OF 4 · BONUS ⭐</span><span>${quiz.score} correct so far</span></div><p class="bonus-note">Bonus question — there’s no wrong way to try!</p>` : `${header('BONUS ⭐ THINK ABOUT IT', 'A question for your heart')}<p class="bonus-note">Free extra! Matthew ${ch <= 3 ? '1–3' : ch === 28 ? '28' : `${ch - 2}–${ch}`} · ${escapeHtml(r.title)}</p>`}<h3 class="quiz-prompt">${escapeHtml(row[0])}</h3><div class="quiz-options">${answers.map((x, i) => `<button type="button" class="quiz-option" data-b="${i}">${escapeHtml(x)}</button>`).join('')}</div><div id="bonusAfter"></div>`);
   $('#modalCard').querySelectorAll('[data-b]').forEach(b => b.onclick = () => {
     const pick = answers[Number(b.dataset.b)], best = pick === row[1]; SkyAudio.sfx(best ? 'bonus' : 'correct');
     $('#modalCard').querySelectorAll('[data-b]').forEach(x => { x.disabled = true; if (answers[Number(x.dataset.b)] === row[1]) x.classList.add('correct'); });
@@ -391,8 +391,9 @@ function showBonus(p, ch, done) {
 }
 
 // ---------- Heart moments: typed answers, prayer breaks and voice messages for parents ----------
-function showHeartMoment(p, ch, done) {
-  const m = HEART_MOMENTS[(ch - 1) % HEART_MOMENTS.length], little = p.age <= 6;
+function heartMomentFor(ch) { return ch === 28 ? null : HEART_MOMENTS[(ch - 1) % HEART_MOMENTS.length]; }
+function showHeartMoment(p, ch, done, forced) {
+  const m = forced || heartMomentFor(ch), little = p.age <= 6; if (!m) return done();
   let mode = m.kind === 'record' || little ? 'record' : 'type', clip = null, timer = null;
   const canRec = Recorder.supported();
   if (!canRec) mode = 'type';
@@ -607,12 +608,15 @@ function showGrownUps() {
     return;
   }
   const p = profile();
-  openModal(`${header('TEST MODE', 'Grown-up tools')}<p>Test mode is on for this device. Every look, decoration, and Sky Run is unlocked, and quizzes can be skipped. Skipping a quiz <b>does</b> mark the chapter as read for the current explorer, so use a test explorer for that.</p>${p ? `<div class="builder-section"><b>Preview home stage (not saved)</b><div class="test-row">${HOME_NAMES.map((n, i) => `<button class="button small ${homeStage(p) === i ? 'dark' : 'secondary'}" data-stage="${i}">${n}</button>`).join('')}<button class="button small ghost" data-stage="-1">Real</button></div></div><div class="builder-section"><b>Preview streak flame (not saved)</b><div class="test-row"><input type="range" id="testFlame" min="0" max="30" step="1" value="${testView.streak ?? streak(p)}" style="flex:1"><b id="testFlameN">${testView.streak ?? streak(p)} days</b><button class="button small ghost" id="testFlameReal">Real</button></div><div class="test-row">${[0, 1, 3, 7, 14, 28].map(n => `<button class="button small secondary" data-flame="${n}">${n}</button>`).join('')}</div></div><div class="builder-section"><b>Reading</b><div class="test-row"><button id="testMap" class="button small secondary">Open any chapter</button><button id="testHomeQuiz" class="button small secondary">Try a home quiz</button></div></div>` : ''}<div class="builder-section"><b>Sky Run</b><p class="fineprint">Start Sky Run normally — test options (start at 2,000 for the UFO, unlimited hearts, Bible pages) appear on its start screen.</p></div><a class="button secondary wide" href="qa.html" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:block;margin-bottom:10px">Check all quiz questions (one page) →</a><button id="masterOff" class="button secondary wide">Turn off test mode</button>`);
+  openModal(`${header('TEST MODE', 'Grown-up tools')}<p>Test mode is on for this device. Every look, decoration, and Sky Run is unlocked, and quizzes can be skipped. Skipping a quiz <b>does</b> mark the chapter as read for the current explorer, so use a test explorer for that.</p>${p ? `<div class="builder-section"><b>Preview home stage (not saved)</b><div class="test-row">${HOME_NAMES.map((n, i) => `<button class="button small ${homeStage(p) === i ? 'dark' : 'secondary'}" data-stage="${i}">${n}</button>`).join('')}<button class="button small ghost" data-stage="-1">Real</button></div></div><div class="builder-section"><b>Preview streak flame (not saved)</b><div class="test-row"><input type="range" id="testFlame" min="0" max="30" step="1" value="${testView.streak ?? streak(p)}" style="flex:1"><b id="testFlameN">${testView.streak ?? streak(p)} days</b><button class="button small ghost" id="testFlameReal">Real</button></div><div class="test-row">${[0, 1, 3, 7, 14, 28].map(n => `<button class="button small secondary" data-flame="${n}">${n}</button>`).join('')}</div></div><div class="builder-section"><b>Try the kids’ pop-ups (answers are saved for the current explorer)</b><div class="test-row">${HEART_MOMENTS.map((m, i) => `<button class="button small secondary" data-tryhm="${i}">${i + 1}. ${m.kind === 'record' ? '🎤' : m.kind === 'pray' ? '🙏' : '✏️'} ${escapeHtml(m.prompt.split('?')[0].slice(0, 34))}…</button>`).join('')}</div><b style="display:block;margin-top:8px">Bonus questions (question 4 of the quiz)</b><div class="test-row">${Object.keys(REFLECT).map(c => `<button class="button small secondary" data-trybonus="${c}">Matthew ${c}</button>`).join('')}</div><div class="test-row"><button class="button small dark" id="tryParents">See answers in parent dashboard →</button><button class="button small ghost" id="tryAge">Showing ages ${p && p.age <= 6 ? '4–6' : '7–12'} version — explorer age decides</button></div></div><div class="builder-section"><b>Reading</b><div class="test-row"><button id="testMap" class="button small secondary">Open any chapter</button><button id="testHomeQuiz" class="button small secondary">Try a home quiz</button></div></div>` : ''}<div class="builder-section"><b>Sky Run</b><p class="fineprint">Start Sky Run normally — test options (start at 2,000 for the UFO, unlimited hearts, Bible pages) appear on its start screen.</p></div><a class="button secondary wide" href="qa.html" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:block;margin-bottom:10px">Check all quiz questions (one page) →</a><button id="masterOff" class="button secondary wide">Turn off test mode</button>`);
   $('#modalCard').querySelectorAll('[data-stage]').forEach(b => b.onclick = () => { const v = Number(b.dataset.stage); testView.homeStage = v < 0 ? null : v; render(); showGrownUps(); });
   const setFlame = v => { testView.streak = v; $('#testFlameN').textContent = v == null ? 'real' : `${v} days`; render(); };
   $('#testFlame')?.addEventListener('input', e => setFlame(Number(e.target.value)));
   $('#modalCard').querySelectorAll('[data-flame]').forEach(b => b.onclick = () => { $('#testFlame').value = b.dataset.flame; setFlame(Number(b.dataset.flame)); });
   $('#testFlameReal')?.addEventListener('click', () => setFlame(null));
+  $('#modalCard').querySelectorAll('[data-tryhm]').forEach(b => b.onclick = () => showHeartMoment(p, 1, () => { toast('Saved — see it in Parents → What they said'); showGrownUps(); }, HEART_MOMENTS[Number(b.dataset.tryhm)]));
+  $('#modalCard').querySelectorAll('[data-trybonus]').forEach(b => b.onclick = () => { quiz = { mode: 'daily', chapter: Number(b.dataset.trybonus), score: 3, test: true, questions: [] }; showBonus(p, Number(b.dataset.trybonus), () => showGrownUps(), true); });
+  $('#tryParents')?.addEventListener('click', () => showParentDashboard(p?.id));
   $('#testMap')?.addEventListener('click', showChapters);
   $('#testHomeQuiz')?.addEventListener('click', () => { const sorted = [...p.completed].sort((a, b) => a - b); const ch = sorted.length >= 3 ? sorted.slice(0, 3) : [1, 2, 3]; startQuiz({ mode: 'review', chapters: ch, test: true }); });
   $('#masterOff').onclick = () => { state.master = false; testView.homeStage = null; testView.streak = null; save(); closeModal(); render(); };
