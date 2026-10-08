@@ -2,7 +2,7 @@
 .brand-sub{font-family:Agharti,Impact,sans-serif;font-size:19px;letter-spacing:1.5px;color:#faa731;margin-left:-4px;margin-top:9px;white-space:nowrap}
 .hero-wordmark span{font-size:40px!important;letter-spacing:1px}
 .hero-avatar{display:none}
-.hero-flyer{position:absolute;left:30%;top:22%;width:260px;height:260px;background:url('turnarounds/boy-flight-outfits.webp') 0 0/400% 200% no-repeat;filter:drop-shadow(0 18px 10px #19375144);animation:heroFloat 2.6s ease-in-out infinite}
+.hero-flyer{position:absolute;left:30%;top:22%;width:260px;height:260px;background:url('hero-flyer.webp') center/contain no-repeat;filter:drop-shadow(0 18px 10px #19375144);animation:heroFloat 2.6s ease-in-out infinite}
 @keyframes heroFloat{50%{transform:translateY(-16px) rotate(-3deg)}}
 .test-badge{background:#ffe25a;color:#29464a;font:800 11px/1 'DM Sans',sans-serif;letter-spacing:1.5px;padding:7px 10px;border-radius:99px;box-shadow:0 2px 0 #0002}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:60;background:#29464a;color:#fff;padding:12px 20px;border-radius:12px;font-weight:800;box-shadow:0 8px 30px #0005;max-width:90vw;text-align:center}
