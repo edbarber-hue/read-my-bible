@@ -190,3 +190,24 @@ body.playing{overflow:hidden}
 .pd-chapter{margin:8px 0 4px;font-weight:800;color:#29464a!important}.pd-chapter span{font-weight:600;color:var(--muted)}.pd-talk ol{margin:4px 0 0;padding-left:20px}.pd-talk li{margin:6px 0;line-height:1.45}
 .pd-foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 @media (max-width:600px){.pd-stats{grid-template-columns:1fr 1fr}.parents-button{padding:6px 9px}.profile-pill{display:none}}
+
+.pin-warn{margin-top:4px}.pin-ack{display:flex;gap:8px;align-items:center;font-weight:700;margin:8px 0 14px;color:#29464a}
+.hm-prompt{font:700 21px/1.35 FavorSans,'DM Sans',sans-serif;color:#29464a!important}
+.rec-box{display:grid;justify-items:center;gap:10px;background:#fff1e6;border-radius:16px;padding:18px;margin:6px 0}
+.rec-button{width:92px;height:92px;border-radius:50%;border:0;background:#c86354;color:#fff;font-size:40px;box-shadow:0 6px 0 #8d3f34;cursor:pointer}
+.rec-button.on{background:#e8321b;animation:recpulse 1s ease-in-out infinite;font-size:30px}
+@keyframes recpulse{50%{box-shadow:0 6px 0 #8d3f34,0 0 0 14px #e8321b33}}
+.rec-text{font-weight:800;color:#7a4a2c}.rec-box audio{width:100%}
+.hm-links{display:flex;justify-content:space-between;margin-top:6px}
+.pd-journal{background:#fff6ea;border-radius:12px;padding:10px 12px;margin:10px 0}.pd-journal.empty small{display:block;color:var(--muted)}
+.pd-journal-head{display:flex;justify-content:space-between;align-items:center}.pd-new{background:#c86354;color:#fff;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:800}
+.pd-entry{border-top:1px solid #ecd4b7;padding:8px 0;position:relative}.pd-entry small{color:var(--muted);font-weight:700}.pd-entry-q{margin:2px 0;font-weight:700;color:#29464a!important}.pd-entry-a{margin:4px 0;font-size:16px;color:#29464a!important}.pd-entry audio{width:100%;margin:4px 0}
+.pd-journal .pd-entry.more{display:none}.pd-journal.all .pd-entry.more{display:block}.pd-del{position:absolute;right:0;top:6px;font-size:11px;color:#a3846c}
+#parentsButton{position:relative}#parentsButton[data-badge]:not([data-badge=""]):after{content:attr(data-badge);position:absolute;top:-6px;right:-6px;background:#e8321b;color:#fff;border-radius:99px;font-size:11px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px}
+
+.pd-last{margin:6px 0!important;color:#29464a!important}
+.pd-asked,.pd-said{border-radius:10px;padding:8px 10px;margin:6px 0}
+.pd-asked{background:#fbe8ca}.pd-said{background:#eef6f1}
+.pd-asked span,.pd-said span{display:block;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#a0623f}.pd-said span{color:#315b5a}
+.pd-asked p,.pd-said p{margin:2px 0!important;color:#29464a!important;font-size:15px}.pd-said p{font-size:17px;font-weight:700}
+.pd-talk-head b:after{content:" — ask your child";font-weight:600;color:var(--muted);font-size:13px}

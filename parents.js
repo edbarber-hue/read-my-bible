@@ -1,31 +1,44 @@
-// Conversation starters for parents: two questions per chapter to help kids reflect and get to know Jesus.
+// Conversation starters for parents. Two per chapter:
+//   1) a personal question that helps your child reflect, and
+//   2) a "share together" question that you BOTH answer (you go first!) to grow closer to each other and to Jesus.
 const PARENT_TALK = {
-  1: ['God gave Jesus the name Immanuel, “God with us.” When is a time you want to remember that God is with you?', 'Joseph obeyed God even when it was hard. What is something hard God might be asking our family to do?'],
-  2: ['The wise men traveled a long way to worship Jesus. What can we do this week to make time for Jesus?', 'God protected Jesus’ family. How has God taken care of our family?'],
-  3: ['God said, “This is my Son, whom I love.” How does it feel to know God loves you like that too?', 'John told people to turn back to God. Is there anything you want to say sorry to God for today?'],
-  4: ['Jesus used God’s words to say no to temptation. Which Bible verse could help you when you’re tempted?', 'Jesus asked the fishermen to follow him, and they did right away. What does following Jesus look like at school or at home?'],
-  5: ['Jesus said we are the light of the world. Who is someone you could shine for this week?', 'Jesus said to love our enemies. Is there someone who is hard to love? How could we pray for them?'],
-  6: ['Jesus taught us to pray “Our Father.” What would you like to talk to God about today?', 'Jesus said not to worry, because God takes care of the birds. What are you worried about that we can give to God?'],
-  7: ['Jesus said, “Ask, seek, knock.” What is something you want to ask God for?', 'The wise man built on the rock by doing what Jesus said. What is one thing Jesus said that we can do this week?'],
-  8: ['Jesus calmed a big storm. What feels like a storm in your life right now?', 'Jesus touched and healed people others stayed away from. Who could you be kind to that others leave out?'],
-  9: ['Jesus called Matthew, a tax collector people didn’t like. Why do you think Jesus wanted to be his friend?', 'Jesus said he came for people who need him. How do you need Jesus today?'],
-  10: ['Jesus said you are worth more than many sparrows. What does that tell you about how God sees you?', 'Jesus sent his friends to tell others about him. Who could you tell about Jesus?'],
-  11: ['Jesus said, “Come to me, all who are tired, and I will give you rest.” When do you feel tired or stressed?', 'How can we find rest with Jesus as a family?'],
-  12: ['Jesus healed a man on the Sabbath because doing good matters. What good thing could you do for someone this week?', 'Jesus said our words show what is in our hearts. What kind words could you say tomorrow?'],
-  13: ['In the story of the seeds, which kind of soil do you want your heart to be like? Why?', 'Jesus said the kingdom is like a tiny mustard seed that grows big. What small thing could God grow in you?'],
-  14: ['Jesus fed thousands with five loaves and two fish. What little thing could you give to Jesus?', 'Peter sank when he looked at the wind. What helps you keep your eyes on Jesus?'],
-  15: ['A mom kept asking Jesus to help her daughter. Why do you think Jesus loved her faith?', 'Jesus said what comes out of our mouths shows our hearts. How was your heart today?'],
-  16: ['Jesus asked, “Who do you say I am?” Who is Jesus to you?', 'Peter said Jesus is the Christ, the Son of God. What do you want to know more about Jesus?'],
-  17: ['God said, “Listen to him.” How can we listen to Jesus every day?', 'Jesus said faith as small as a mustard seed can do big things. What do you want to trust God with?'],
-  18: ['Jesus said to become humble like a child. What do you think being humble means?', 'Jesus said to forgive again and again. Is there someone you need to forgive?'],
-  19: ['Jesus welcomed the children. How does it feel to know Jesus always has time for you?', 'The rich young man found it hard to give up his things. Is there anything you love more than Jesus?'],
-  20: ['Jesus came to serve, not to be served. How can you serve someone in our family this week?', 'Two blind men asked Jesus for help, and he had compassion on them. What do you want Jesus to help you see?'],
-  21: ['The crowd shouted “Hosanna!” to praise Jesus. What are you thankful to Jesus for today?', 'Jesus was upset when people misused God’s house. How can we show respect for God?'],
-  22: ['Jesus said the greatest commandment is to love God with all your heart. What does loving God with all your heart look like?', 'Who is a neighbor you could show love to this week?'],
-  23: ['Jesus said the greatest among you will be a servant. Who is someone you think serves others well?', 'Jesus wants us to be the same on the inside as on the outside. Why does that matter?'],
-  24: ['Jesus said to stay awake and be ready for his return. How can we live ready for Jesus?', 'Jesus said his words will never pass away. Why can we trust what Jesus says?'],
-  25: ['When we help someone in need, Jesus says we do it for him. Who could we help together?', 'The servants used what the master gave them. What gifts has God given you to use?'],
-  26: ['Jesus shared bread and wine with his friends to remember him. What do you want to remember about Jesus?', 'Peter said he didn’t know Jesus, but Jesus still loved him. How does it feel to know Jesus forgives us?'],
-  27: ['Jesus died on the cross because he loves us. How does that make you feel?', 'The soldier said, “Truly this was God’s Son.” What do you believe about Jesus?'],
-  28: ['Jesus is alive! Why is that such good news?', 'Jesus said, “I am with you always.” How can we remember that this week?']
+  1: ['God gave Jesus the name Immanuel, “God with us.” When do you most need to know God is with you?', 'Share together: tell each other about a time you felt God was close to you.'],
+  2: ['The wise men brought Jesus their best gifts. What is something special you could give to Jesus?', 'Share together: what is the best gift someone in our family ever gave you, and why did it mean so much?'],
+  3: ['God said Jesus was his Son he loves and delights in. How does it feel to know God delights in you too?', 'Share together: tell each other one thing you love and are proud of about the other person.'],
+  4: ['Jesus said no to temptation by remembering God’s words. What is something that is hard for you to say no to?', 'Share together: what is something you’re each trying to get better at? How can we cheer each other on this week?'],
+  5: ['Jesus said you are the light of the world. When do you feel brave enough to shine?', 'Share together: who is someone that has been a light to you? Let’s thank God for them.'],
+  6: ['Jesus said not to worry, because God feeds the birds. What is one thing that worries you right now?', 'Share together: tell each other one worry, then pray for each other’s worry.'],
+  7: ['Jesus said, “Ask, seek, knock.” If you could ask God for anything for someone else, what would it be?', 'Share together: what is one prayer God has answered for our family?'],
+  8: ['The disciples were scared in the storm and Jesus calmed it. What makes you feel scared?', 'Share together: tell each other about a time you were scared and how God helped you.'],
+  9: ['Jesus chose Matthew even though people didn’t like him. Have you ever felt left out? What was that like?', 'Share together: is there someone at school, church or work who needs a friend? How could we include them?'],
+  10: ['Jesus said you are worth more than many sparrows. When do you forget how much you matter?', 'Share together: tell each other three things that make the other person special.'],
+  11: ['Jesus said, “Come to me, all who are tired.” When do you feel tired or stressed?', 'Share together: what helps each of us rest? Let’s plan one restful thing to do together this week.'],
+  12: ['Jesus did good even when others complained. What is one good thing you did, or could do, for someone?', 'Share together: what kind words would each of us like to hear more often? Say them to each other now.'],
+  13: ['A tiny mustard seed grows into a big tree. What is something small that God is growing in you?', 'Share together: how have we each grown this year? Tell each other one change you’ve noticed.'],
+  14: ['Peter stepped out of the boat because Jesus called him. What is something brave Jesus might be asking you to do?', 'Share together: tell each other about something brave you did. How did it feel?'],
+  15: ['A mom kept asking Jesus to help her daughter and didn’t give up. What do you want to keep praying for?', 'Share together: what is one thing we can keep praying for together this month?'],
+  16: ['Jesus asked, “Who do you say I am?” Who is Jesus to you, in your own words?', 'Share together: parent, share how you came to know Jesus. Child, ask one question about it.'],
+  17: ['God said, “Listen to him.” When is the best time in your day to listen to Jesus?', 'Share together: how could we make a little time each day to listen to Jesus together?'],
+  18: ['Jesus said to forgive again and again. Is there someone you find hard to forgive?', 'Share together: is there anything we need to say sorry for or forgive each other for today?'],
+  19: ['Jesus said, “Let the little children come to me.” What would you like to say to Jesus if he were sitting with you right now?', 'Share together: what is one thing you love doing together? Let’s plan to do it this week.'],
+  20: ['Jesus came to serve, not to be served. Who in our family could you help this week?', 'Share together: tell each other one way the other person has helped or served you lately. Say thank you!'],
+  21: ['The crowds shouted “Hosanna!” to praise Jesus. What are you most thankful to Jesus for today?', 'Share together: take turns naming things you’re thankful for. How many can you list together?'],
+  22: ['Jesus said to love God with all your heart and to love your neighbor. Who is someone hard for you to love?', 'Share together: how does each of us like to be shown love? (Hugs, kind words, time together, help, or a gift?)'],
+  23: ['Jesus wants us to be the same inside and outside. Is there anything on the inside you’d like to tell someone about?', 'Share together: what helps you feel safe to share your feelings with each other?'],
+  24: ['Jesus said to stay ready for him. What would you like Jesus to find you doing when he comes back?', 'Share together: what is one habit we could start as a family to stay close to Jesus?'],
+  25: ['Jesus said when we help people in need, we help him. Who do you know who needs help or kindness?', 'Share together: what is something we could do together this month to help someone in need?'],
+  26: ['Peter said he didn’t know Jesus, but Jesus still loved him. How does it feel to know Jesus forgives you?', 'Share together: tell each other about a time you were forgiven. How did it feel?'],
+  27: ['Jesus died on the cross because he loves you. How does it feel to be loved that much?', 'Share together: how can we show each other that kind of love this week?'],
+  28: ['Jesus is alive and with you always! What do you want to tell Jesus today?', 'Share together: who could we tell about Jesus? Pray for them together right now.']
 };
+// "Heart moments" after each chapter: kids can type or record a message (younger kids record by default).
+// kind: 'type' (one answer), 'pray' (person + what to pray), 'record' (a voice message for parents).
+const HEART_MOMENTS = [
+  { kind: 'record', title: 'Message for your parents', prompt: 'What’s one thing you’re grateful to your parents for? Record a message to tell them!' },
+  { kind: 'type', title: 'Share Jesus', prompt: 'Who do you want to share Jesus with?', placeholder: 'Their name' },
+  { kind: 'record', title: 'Message for your parents', prompt: 'What’s one thing you love about Jesus? Tell your parents!' },
+  { kind: 'pray', title: 'PRAY BREAK!', prompt: 'One person you want to pray for:', prompt2: 'What do you want to pray for them?' },
+  { kind: 'record', title: 'Message for your parents', prompt: 'What’s one thing you love about your parents? Record it for them!' },
+  { kind: 'type', title: 'Pray for someone', prompt: 'Who do you want to pray for?', placeholder: 'Their name' },
+  { kind: 'record', title: 'PRAY BREAK!', prompt: 'Who do you want to pray for right now? Record what you want to say to them!' }
+];

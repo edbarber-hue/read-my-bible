@@ -127,6 +127,7 @@ function render() {
   ['#dashboard', '#homeBase', '#outfitSection'].forEach(s => $(s).classList.toggle('hidden', !p));
   $('#hero').classList.toggle('hidden', !!p);
   $('#testBadge').classList.toggle('hidden', !isMaster());
+  const unseen = state.profiles.reduce((n, k) => n + Math.max(0, (k.journal || []).length - (k.journalSeen || 0)), 0); $('#parentsButton').dataset.badge = unseen ? unseen : ''; 
   $('#activeProfileLabel').textContent = p ? `${p.name} · age ${p.age}` : 'No explorer selected';
   $('#primaryButton').textContent = p ? 'Continue adventure' : 'Choose an explorer';
   if (!p) return;
@@ -348,6 +349,7 @@ function finishQuiz() {
   // Free bonus reflection question every 3rd chapter (and in the home quiz). It never blocks progress.
   const bonusCh = quiz.mode === 'review' ? Math.max(...quiz.chapters) : quiz.chapter;
   if (typeof REFLECT !== 'undefined' && REFLECT[bonusCh] && !quiz.bonusDone) { quiz.bonusDone = true; showBonus(p, bonusCh, finishQuiz); return; }
+  if (quiz.mode === 'daily' && !quiz.test && !quiz.heartDone) { quiz.heartDone = true; showHeartMoment(p, quiz.chapter, finishQuiz); return; }
   if (quiz.mode === 'review' && quiz.test) { openModal(`${header('TEST MODE', 'Home quiz passed')}<p>In normal play this would upgrade the home. Nothing was saved.</p><button class="button primary wide" data-close>Close</button>`); return; }
   if (quiz.mode === 'review') return finishHomeQuiz(p);
   const n = quiz.chapter, isNew = !completed(p, n);
@@ -374,17 +376,58 @@ function showBonus(p, ch, done) {
     const pick = answers[Number(b.dataset.b)], best = pick === row[1]; SkyAudio.sfx(best ? 'bonus' : 'correct');
     $('#modalCard').querySelectorAll('[data-b]').forEach(x => { x.disabled = true; if (answers[Number(x.dataset.b)] === row[1]) x.classList.add('correct'); });
     if (best) { p.reflections = p.reflections || {}; p.reflections[ch] = true; save(); }
+    p.journal = p.journal || []; p.journal.push({ id: 'j' + Date.now(), date: todayKey(), ch, title: 'Bonus question', prompt: row[0], text: pick }); save();
     const typeBox = !little && r.bigType && best;
     $('#bonusAfter').innerHTML = `<p class="quiz-feedback">${best ? '⭐ Deep Thinker! Great answer.' : `Good thinking! Here’s a great answer: <b>${escapeHtml(row[1])}</b>.`}</p>${typeBox ? `<label class="field">${escapeHtml(r.bigType)}<input id="bonusNames" maxlength="80" placeholder="e.g. my cousin Sam, my friend Ana"></label>` : ''}<button id="bonusNext" class="button primary wide">${typeBox ? 'Done' : 'Continue'}</button>`;
     $('#bonusNext').onclick = () => {
       if (typeBox) {
-        const names = $('#bonusNames').value.trim(); if (names) { p.shareWith = names; save(); }
+        const names = $('#bonusNames').value.trim(); if (names) { p.shareWith = names; p.journal.push({ id: 'j' + Date.now() + 'n', date: todayKey(), ch, title: 'Share Jesus', prompt: 'Who could you tell about Jesus? Name them!', text: names }); save(); }
         $('#bonusAfter').innerHTML = `<div class="notice share-note">${escapeHtml(r.bigDone)}${names ? `<br><b>${escapeHtml(names)}</b>` : ''}</div><button id="bonusNext2" class="button primary wide">Continue</button>`;
         $('#bonusNext2').onclick = done; return;
       }
       done();
     };
   });
+}
+
+// ---------- Heart moments: typed answers, prayer breaks and voice messages for parents ----------
+function showHeartMoment(p, ch, done) {
+  const m = HEART_MOMENTS[(ch - 1) % HEART_MOMENTS.length], little = p.age <= 6;
+  let mode = m.kind === 'record' || little ? 'record' : 'type', clip = null, timer = null;
+  const canRec = Recorder.supported();
+  if (!canRec) mode = 'type';
+  const draw = () => {
+    const typeUI = m.kind === 'pray'
+      ? `<label class="field">${escapeHtml(m.prompt)}<input id="hmA" maxlength="60" placeholder="Their name"></label><label class="field">${escapeHtml(m.prompt2)}<textarea id="hmB" rows="2" maxlength="200" placeholder="I pray that…"></textarea></label>`
+      : `<label class="field">Your answer<${m.kind === 'type' ? `input id="hmA" maxlength="80" placeholder="${escapeHtml(m.placeholder || '')}"` : 'textarea id="hmA" rows="3" maxlength="300"'}>${m.kind === 'type' ? '' : '</textarea>'}</label>`;
+    const recUI = `<div class="rec-box"><button id="hmRec" class="rec-button" aria-label="Record">🎤</button><div id="hmRecText" class="rec-text">${clip ? 'Recorded! Listen, then save it.' : 'Tap the microphone and talk. Tap again to stop.'}</div>${clip ? `<audio id="hmPlay" controls src="${URL.createObjectURL(clip)}"></audio>` : ''}</div>`;
+    openModal(`${header(m.title === 'PRAY BREAK!' ? '🙏 PRAY BREAK!' : '💛 HEART MOMENT', escapeHtml(m.title))}<p class="hm-prompt">${escapeHtml(m.kind === 'pray' && mode === 'record' ? 'Who do you want to pray for? Say their name and what you want to pray for them.' : m.prompt)}</p>
+      ${mode === 'record' ? recUI : typeUI}
+      ${m.kind !== 'record' || mode === 'record' ? '' : ''}
+      <p class="fineprint">Your ${mode === 'record' ? 'message' : 'answer'} is saved for your parents to see on this device.</p>
+      <button id="hmSave" class="button primary wide" ${mode === 'record' && !clip ? 'disabled' : ''}>Save</button>
+      <div class="hm-links">${canRec ? `<button id="hmSwitch" class="text-button">${mode === 'record' ? '✏️ Type instead' : '🎤 Say it instead'}</button>` : ''}<button id="hmSkip" class="text-button">Skip for today</button></div>`);
+    $('#hmSwitch')?.addEventListener('click', () => { Recorder.cancel(); clearInterval(timer); mode = mode === 'record' ? 'type' : 'record'; clip = null; draw(); });
+    $('#hmSkip').onclick = () => { Recorder.cancel(); clearInterval(timer); done(); };
+    if (mode === 'record') {
+      const btn = $('#hmRec'), txt = $('#hmRecText');
+      btn.onclick = async () => {
+        if (Recorder.recording) { clearInterval(timer); clip = await Recorder.stop(); draw(); return; }
+        try { await Recorder.start(); } catch { toast('Please allow the microphone to record'); return; }
+        let left = 60; btn.classList.add('on'); btn.textContent = '■'; txt.textContent = `Recording… ${left}s (tap to stop)`;
+        timer = setInterval(async () => { left--; txt.textContent = `Recording… ${left}s (tap to stop)`; if (left <= 0) { clearInterval(timer); clip = await Recorder.stop(); draw(); } }, 1000);
+      };
+    }
+    $('#hmSave').onclick = async () => {
+      const entry = { id: 'j' + Date.now(), date: todayKey(), ch, title: m.title, prompt: m.kind === 'pray' ? `${m.prompt} ${m.prompt2}` : m.prompt };
+      if (mode === 'record') { if (!clip) return; try { await VoiceStore.put(entry.id, clip); entry.audio = true; } catch { toast('Could not save the recording on this device'); return; } }
+      else { const A = $('#hmA').value.trim(), B = $('#hmB')?.value.trim() || ''; if (!A) { toast('Type your answer first'); return; } entry.text = A; if (B) entry.text2 = B; }
+      p.journal = p.journal || []; p.journal.push(entry); save(); SkyAudio.sfx('bonus');
+      openModal(`${header('THANK YOU!', m.title === 'PRAY BREAK!' ? 'Let’s pray!' : 'Saved for your parents')}<p style="text-align:center;font-size:18px">${m.kind === 'pray' || m.title === 'PRAY BREAK!' ? 'Take a moment right now and pray for them. God hears you! 🙏' : m.prompt.startsWith('Who do you want to share') ? 'Great! Try to go to them this week and share with them about Jesus.' : 'Your parents will love this! 💛'}</p><button id="hmDone" class="button primary wide">Continue</button>`);
+      $('#hmDone').onclick = done;
+    };
+  };
+  draw();
 }
 
 // ---------- Home ----------
@@ -504,14 +547,14 @@ function showParentsGate() {
   const pin = getPin();
   const body = pin
     ? `<p>Enter your 4-digit parent code to see your kids’ progress.</p><label class="field">Parent code<input id="pinIn" type="password" inputmode="numeric" maxlength="4" autocomplete="off" class="pin-input"></label><button id="pinGo" class="button primary wide">Open parent dashboard</button><button id="pinForgot" class="text-button" style="width:100%">Forgot the code?</button>`
-    : `<p>Create a 4-digit parent code. Kids won’t be able to open this area without it. It’s saved on this device only.</p><div class="two-col"><label class="field">New code<input id="pinNew" type="password" inputmode="numeric" maxlength="4" autocomplete="off" class="pin-input"></label><label class="field">Type it again<input id="pinNew2" type="password" inputmode="numeric" maxlength="4" autocomplete="off" class="pin-input"></label></div><button id="pinSet" class="button primary wide">Save code and continue</button>`;
+    : `<p>Create a 4-digit parent code. Kids won’t be able to open this area without it. It’s saved on this device only.</p><div class=\"notice pin-warn\">🔐 <b>Don’t forget your code!</b> Write it down or save it somewhere safe. If you forget it, you’ll need to ask a Favor Kids leader to reset it.</div><label class=\"pin-ack\"><input type=\"checkbox\" id=\"pinAck\"> I’ve written down or saved my code</label><div class="two-col"><label class="field">New code<input id="pinNew" type="password" inputmode="numeric" maxlength="4" autocomplete="off" class="pin-input"></label><label class="field">Type it again<input id="pinNew2" type="password" inputmode="numeric" maxlength="4" autocomplete="off" class="pin-input"></label></div><button id="pinSet" class="button primary wide">Save code and continue</button>`;
   openModal(`${header('PARENTS', 'Parent access')}${body}`);
   if (pin) {
     const go = () => { const v = $('#pinIn').value.trim(); if (v === pin) showParentDashboard(); else if (v === MASTER_CODE) { state.master = true; save(); render(); showGrownUps(); } else { toast('That code isn’t right'); $('#pinIn').value = ''; } };
     $('#pinGo').onclick = go; $('#pinIn').onkeydown = e => { if (e.key === 'Enter') go(); }; $('#pinIn').focus();
     $('#pinForgot').onclick = () => openModal(`${header('PARENTS', 'Reset the parent code')}<p>To keep this area safe from curious kids, resetting needs the Favor Kids team code. Ask your Favor Kids leader, or remove and re-add the site on this device.</p><label class="field">Favor Kids team code<input id="pinReset" type="password" inputmode="numeric" maxlength="8" class="pin-input"></label><button id="pinResetGo" class="button primary wide">Reset parent code</button>`) || ($('#pinResetGo').onclick = () => { if ($('#pinReset').value.trim() === MASTER_CODE) { try { localStorage.removeItem(PIN_KEY); } catch { } toast('Parent code removed — create a new one'); showParentsGate(); } else toast('That code isn’t right'); });
   } else {
-    $('#pinSet').onclick = () => { const a = $('#pinNew').value.trim(), b = $('#pinNew2').value.trim(); if (!/^\d{4}$/.test(a)) { toast('Use 4 numbers'); return; } if (a !== b) { toast('The two codes don’t match'); return; } if (a === MASTER_CODE) { toast('Please choose a different code'); return; } try { localStorage.setItem(PIN_KEY, a); } catch { } toast('Parent code saved'); showParentDashboard(); };
+    $('#pinSet').onclick = () => { const a = $('#pinNew').value.trim(), b = $('#pinNew2').value.trim(); if (!/^\d{4}$/.test(a)) { toast('Use 4 numbers'); return; } if (a !== b) { toast('The two codes don’t match'); return; } if (a === MASTER_CODE) { toast('Please choose a different code'); return; } if (!$('#pinAck').checked) { toast('Please confirm you’ve saved your code'); return; } try { localStorage.setItem(PIN_KEY, a); } catch { } toast(`Parent code saved: ${a} — don’t forget it!`); showParentDashboard(); };
   }
 }
 function lastReadDay(p) { const days = Object.keys(p.dailyPass || {}).sort(); return days[days.length - 1] || null; }
@@ -524,19 +567,30 @@ function showParentDashboard(focusId) {
     const week = Array.from({ length: 7 }, (_, i) => addDays(todayKey(), i - 6)).map(d => `<span class="pd-day ${k.dailyPass[d] != null ? 'on' : ''}" title="${d}">${new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>`).join('');
     const talkCh = lastCh || (k.completed.length ? Math.max(...k.completed) : 1);
     return `<section class="pd-kid" id="pd-${k.id}">
-      <div class="pd-head"><span class="profile-avatar ${k.gender === 'girl' ? 'girl' : 'boy'}"></span><div><b>${escapeHtml(k.name)}</b><small>Age ${k.age} · ${k.age <= 6 ? 'reads one verse a day' : 'reads one chapter a day'}</small></div><span class="pd-streak">🔥 ${s} day${s === 1 ? '' : 's'}</span></div>
+      <div class="pd-head"><span class="profile-avatar ${k.gender === 'girl' ? 'girl' : 'boy'}"></span><div><b>${escapeHtml(k.name)}</b><small>Age ${k.age} · ${k.age <= 6 ? 'reads one verse a day' : 'reads one chapter a day'}</small></div><span class="pd-streak">🔥 ${s} day${s === 1 ? '' : 's'} in a row</span></div>
       <div class="pd-progress"><div class="book-progress-top"><span>Book of Matthew</span><b>${read} / 28 chapters</b></div><div class="book-track"><span style="width:${read / 28 * 100}%"></span></div></div>
-      <div class="pd-stats"><div><small>Last read</small><b>${niceDay(last)}${lastCh ? ` · Matthew ${lastCh}` : ''}</b></div><div><small>Home</small><b>${HOME_NAMES[Math.min(3, k.homeStage || 0)]}</b></div><div><small>⭐ Deep Thinker</small><b>${Object.keys(k.reflections || {}).length}</b></div><div><small>Best Sky Run</small><b>${k.best || 0}</b></div></div>
-      <div class="pd-week"><small>Last 7 days</small><div>${week}</div></div>
+      <p class="pd-last">Last read: <b>${niceDay(last)}${lastCh ? ` · Matthew ${lastCh}` : ''}</b></p>
+      <div class="pd-week"><small>Days read this week</small><div>${week}</div></div>
       ${k.shareWith ? `<div class="notice">💬 ${escapeHtml(k.name)} wants to tell <b>${escapeHtml(k.shareWith)}</b> about Jesus. Help them make a plan this week!</div>` : ''}
+      ${journalHtml(k)}
       <div class="pd-talk"><div class="pd-talk-head"><b>Talk together</b><select data-talk="${k.id}" aria-label="Choose a chapter">${QUESTIONS.map((q, i) => `<option value="${i + 1}" ${i + 1 === talkCh ? 'selected' : ''}>Matthew ${i + 1}${k.completed.includes(i + 1) ? ' ✓' : ''}</option>`).join('')}</select></div>
         <div class="pd-q" data-q="${k.id}">${talkHtml(talkCh)}</div></div>
     </section>`;
   }).join('');
-  openModal(`${header('PARENTS', 'Parent dashboard')}<p>See how your kids are doing and use the questions to talk about what they read. Ask, listen, and share what God is teaching you too!</p>${cards}<div class="pd-foot"><button id="pdChangePin" class="text-button">Change parent code</button><a class="text-button" href="qa.html" target="_blank" rel="noopener">All questions & answers →</a></div>`);
+  openModal(`${header('PARENTS', 'Parent dashboard')}<p>See how your kids are doing, hear what they shared, and use the questions to talk together. Ask, listen, and share what God is teaching you too!</p>${cards}<div class="pd-foot"><button id="pdChangePin" class="text-button">Change parent code</button><a class="text-button" href="qa.html" target="_blank" rel="noopener">All questions & answers →</a></div>`);
   $('#modalCard').querySelectorAll('[data-talk]').forEach(sel => sel.onchange = () => { $('#modalCard').querySelector(`[data-q="${sel.dataset.talk}"]`).innerHTML = talkHtml(Number(sel.value)); });
+  $('#modalCard').querySelectorAll('[data-clip]').forEach(async el => { try { const b = await VoiceStore.get(el.dataset.clip); if (b) el.src = URL.createObjectURL(b); else el.replaceWith(Object.assign(document.createElement('small'), { textContent: '(recording not found on this device)' })); } catch { } });
+  $('#modalCard').querySelectorAll('[data-deljournal]').forEach(b => b.onclick = () => { const [kid, id] = b.dataset.deljournal.split('|'), k = state.profiles.find(x => x.id === kid); if (!k || !confirmDelete(b)) return; k.journal = (k.journal || []).filter(e => e.id !== id); VoiceStore.del(id).catch(() => { }); save(); showParentDashboard(kid); });
+  $('#modalCard').querySelectorAll('[data-morejournal]').forEach(b => b.onclick = () => { b.closest('.pd-journal').classList.add('all'); b.remove(); });
+  kids.forEach(k => { k.journalSeen = (k.journal || []).length; }); save();
   $('#pdChangePin').onclick = () => { try { localStorage.removeItem(PIN_KEY); } catch { } showParentsGate(); };
   if (focusId) document.getElementById('pd-' + focusId)?.scrollIntoView();
+}
+function confirmDelete(b) { if (b.dataset.armed) return true; b.dataset.armed = 1; b.textContent = 'Tap again to delete'; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = 'Delete'; } }, 3000); return false; }
+function journalHtml(k) {
+  const j = (k.journal || []).slice().reverse(); if (!j.length) return `<div class="pd-journal empty"><b>💛 What ${escapeHtml(k.name)} shared</b><small>After reading, ${escapeHtml(k.name)} gets a question, a prayer break or a message to record for you. Their answers will show up here.</small></div>`;
+  const fresh = j.length - (k.journalSeen || 0);
+  return `<div class="pd-journal"><div class="pd-journal-head"><b>💛 What ${escapeHtml(k.name)} shared</b>${fresh > 0 ? `<span class="pd-new">${fresh} new</span>` : ''}</div>${j.map((e, i) => `<div class="pd-entry ${i >= 4 ? 'more' : ''}"><small>${niceDay(e.date)} · after reading Matthew ${e.ch}</small><div class="pd-asked"><span>We asked them:</span><p>${escapeHtml(e.prompt)}</p></div><div class="pd-said"><span>They said:</span>${e.audio ? `<audio controls preload="metadata" data-clip="${e.id}"></audio>` : ''}${e.text ? `<p>“${escapeHtml(e.text)}”${e.text2 ? `<br>🙏 “${escapeHtml(e.text2)}”` : ''}</p>` : ''}</div><button class="text-button pd-del" data-deljournal="${k.id}|${e.id}">Delete</button></div>`).join('')}${j.length > 4 ? '<button class="text-button" data-morejournal>Show all</button>' : ''}</div>`;
 }
 function talkHtml(n) {
   const q = QUESTIONS[n - 1], t = PARENT_TALK[n] || [];
