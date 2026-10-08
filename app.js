@@ -216,6 +216,42 @@ function maybeWelcome(p) {
 }
 
 
+
+// ---------- Save to home screen (teaches parents how; Android can install with one tap) ----------
+let installEvt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function deviceKind() {
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const inApp = /FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|KAKAOTALK|TikTok/i.test(ua);
+  if (inApp) return ios ? 'inapp-ios' : 'inapp-android';
+  if (ios) return /CriOS/.test(ua) ? 'ios-chrome' : 'ios';
+  if (/Android/i.test(ua)) return 'android';
+  return 'desktop';
+}
+const ICON_SHARE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>';
+const ICON_PLUS = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+const ICON_DOTS = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+function showInstall(after) {
+  try { localStorage.setItem('rmb-a2hs-seen', '1'); } catch { }
+  const kind = deviceKind(), step = (n, icon, html) => `<li class="a2hs-step"><span class="a2hs-num">${n}</span><span class="a2hs-icon">${icon}</span><span>${html}</span></li>`;
+  let body;
+  if (kind.startsWith('inapp')) body = `<p>You opened this inside another app (like Messenger or Facebook). First open it in your phone’s browser:</p><ol class="a2hs-steps">${step(1, ICON_DOTS, `Tap the <b>⋯ menu</b> in the top corner.`)}${step(2, ICON_SHARE, `Choose <b>Open in ${kind === 'inapp-ios' ? 'Safari' : 'Chrome'}</b> (or “Open in browser”).`)}${step(3, ICON_PLUS, `These steps will pop up again there to finish.`)}</ol>`;
+  else if (kind === 'ios' || kind === 'ios-chrome') body = `<ol class="a2hs-steps">${step(1, ICON_SHARE, kind === 'ios' ? `Tap the <b>Share</b> button at the bottom of Safari (a square with an arrow).` : `Tap the <b>Share</b> button at the top right, next to the web address.`)}${step(2, ICON_PLUS, `Scroll down and tap <b>Add to Home Screen</b>.`)}${step(3, '<b class="a2hs-txt">Add</b>', `Tap <b>Add</b> in the top corner. Done!`)}</ol>`;
+  else if (kind === 'android') body = installEvt ? `<p>Your phone can add it in one tap.</p><button id="a2hsInstall" class="button primary wide">📲 Add to home screen</button>` : `<ol class="a2hs-steps">${step(1, ICON_DOTS, `Tap the <b>⋮ menu</b> at the top right of Chrome.`)}${step(2, ICON_PLUS, `Tap <b>Add to Home screen</b> (or <b>Install app</b>).`)}${step(3, '<b class="a2hs-txt">Add</b>', `Tap <b>Add</b> or <b>Install</b>. Done!`)}</ol>`;
+  else body = `<p>Open this website on your child’s phone or tablet, then tap <b>Parents › Save to home screen</b> there for the steps.</p>${installEvt ? '<button id="a2hsInstall" class="button secondary wide">Install on this computer</button>' : ''}`;
+  openModal(`${header('FOR PARENTS', 'Save it to your home screen')}<div class="a2hs-hero"><img src="icon-192.png" alt="" width="64" height="64"><div><b>Read My Bible</b><small>One tap opens it, full screen, every day.</small></div></div>${body}<button id="a2hsDone" class="button ${kind === 'android' && installEvt ? 'secondary' : 'primary'} wide" style="margin-top:12px">Got it!</button>`);
+  $('#a2hsInstall')?.addEventListener('click', async () => { try { installEvt.prompt(); await installEvt.userChoice; } catch { } installEvt = null; closeModal(); after?.(); });
+  $('#a2hsDone').onclick = () => { closeModal(); after?.(); };
+}
+function maybeInstall() {
+  let seen = false; try { seen = !!localStorage.getItem('rmb-a2hs-seen'); } catch { }
+  if (seen || isStandalone() || deviceKind() === 'desktop') return false;
+  if (!$('#modalLayer').classList.contains('hidden') || !$('#gameLayer').classList.contains('hidden')) return false;
+  showInstall(); return true;
+}
+
 // ---------- Kid details + parent consent (for the church's records) ----------
 const COUNTRIES = ['Philippines', 'South Korea', 'Australia', 'Other'];
 // School years are named differently in each country, so the grade list follows the country.
@@ -262,10 +298,11 @@ function showDetails(p, after) {
   if (!p) return;
   openModal(`${header('GROWN-UP HELP', `About ${escapeHtml(p.name)}`)}<p>Please ask a parent or guardian to fill this in. It helps our Favor Kids team know who is reading along, so we can cheer them on.</p>${detailsFields(p)}<button id="dSave" class="button primary wide">Save</button><button id="dLater" class="text-button" style="width:100%">Ask me later</button>`);
   wireCountry();
-  $('#dSave').onclick = () => { const d = readDetails(false); if (!d) return; applyDetails(p, d); save(); toast('Saved. Thank you!'); closeModal(); render(); after?.(); };
+  $('#dSave').onclick = () => { const d = readDetails(false); if (!d) return; applyDetails(p, d); save(); toast('Saved. Thank you!'); closeModal(); render(); after ? after() : setTimeout(() => maybeInstall(), 600); };
   $('#dLater').onclick = () => { p.askedDetails = todayKey(); save(); closeModal(); after?.(); };
 }
 function maybeDetails(p) {
+  if (p && !isMaster() && (!needsDetails(p) || p.askedDetails === todayKey())) { maybeInstall(); return; }
   if (!p || !needsDetails(p) || p.askedDetails === todayKey() || isMaster()) return;
   if (!$('#modalLayer').classList.contains('hidden') || !$('#gameLayer').classList.contains('hidden')) return;
   p.askedDetails = todayKey(); save();   // ask once a day, even if the box is closed
@@ -285,7 +322,7 @@ function showProfiles() {
     if (state.profiles.some(p => `${p.name} ${p.lastName || ''}`.trim().toLowerCase() === `${d.firstName} ${d.lastName}`.toLowerCase())) { toast('That explorer is already on this device'); return; }
     const p = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), name, age, gender, startDate: todayKey(), completed: [], dailyPass: {}, homeStage: 0, skin: 2, hair: 0, hairColor: 0, decor: {}, outdoorDecor: {}, cosmetics: { accessory: null, trail: null, jetpack: null, outfit: null }, best: 0, totalStars: 0, congratsShown: false, v2: 1 };
     applyDetails(p, d); p.lastWelcome = null;
-    state.profiles.push(p); currentId = state.currentId = p.id; leaveFreshLanding(); save(); Sync.event(p, 'Signed up'); closeModal(); render(); toast(`Welcome, ${name}!`);
+    state.profiles.push(p); currentId = state.currentId = p.id; leaveFreshLanding(); save(); Sync.event(p, 'Signed up'); closeModal(); render(); toast(`Welcome, ${name}!`); setTimeout(() => maybeInstall(), 900);
   };
   $('#transferButton').onclick = showTransfer;
   $('#modalCard').querySelectorAll('[data-select]').forEach(b => b.onclick = () => { currentId = state.currentId = b.dataset.select; leaveFreshLanding(); save(); closeModal(); render(); });
@@ -674,7 +711,7 @@ function showParentDashboard(focusId) {
         <div class="pd-q" data-q="${k.id}">${talkHtml(talkCh)}</div></div></div>
     </section>`;
   }).join('');
-  openModal(`${header('PARENTS', 'Parent dashboard')}<p>See how your kids are doing, hear what they shared, and use the questions to talk together. Ask, listen, and share what God is teaching you too!</p>${cards}<div class="pd-foot"><button id="pdChangePin" class="text-button">Change parent code</button><a class="text-button" href="qa.html" target="_blank" rel="noopener">All questions & answers →</a></div>`);
+  openModal(`${header('PARENTS', 'Parent dashboard')}<p>See how your kids are doing, hear what they shared, and use the questions to talk together. Ask, listen, and share what God is teaching you too!</p>${cards}<button id="pdInstall" class="button secondary wide pd-install">📲 Save to home screen</button><div class="pd-foot"><button id="pdChangePin" class="text-button">Change parent code</button><a class="text-button" href="qa.html" target="_blank" rel="noopener">All questions & answers →</a></div>`);
   $('#modalCard').querySelectorAll('[data-pdtab]').forEach(b => b.onclick = () => { const kid = b.dataset.kid; $('#modalCard').querySelectorAll(`[data-kid="${kid}"]`).forEach(x => x.classList.toggle('active', x === b)); ['said', 'talk'].forEach(t => $('#modalCard').querySelector(`[data-pane="${t}-${kid}"]`).classList.toggle('hidden', t !== b.dataset.pdtab)); });
   $('#modalCard').querySelectorAll('[data-editkid]').forEach(b => b.onclick = () => showDetails(state.profiles.find(x => x.id === b.dataset.editkid), () => showParentDashboard(b.dataset.editkid)));
   $('#modalCard').querySelectorAll('[data-talk]').forEach(sel => sel.onchange = () => { $('#modalCard').querySelector(`[data-q="${sel.dataset.talk}"]`).innerHTML = talkHtml(Number(sel.value)); });
@@ -682,6 +719,7 @@ function showParentDashboard(focusId) {
   $('#modalCard').querySelectorAll('[data-deljournal]').forEach(b => b.onclick = () => { const [kid, id] = b.dataset.deljournal.split('|'), k = state.profiles.find(x => x.id === kid); if (!k || !confirmDelete(b)) return; k.journal = (k.journal || []).filter(e => e.id !== id); VoiceStore.del(id).catch(() => { }); save(); showParentDashboard(kid); });
   $('#modalCard').querySelectorAll('[data-morejournal]').forEach(b => b.onclick = () => { b.closest('.pd-journal').classList.add('all'); b.remove(); });
   kids.forEach(k => { k.journalSeen = (k.journal || []).length; }); save();
+  $('#pdInstall').onclick = () => showInstall(() => showParentDashboard());
   $('#pdChangePin').onclick = () => { try { localStorage.removeItem(PIN_KEY); } catch { } showParentsGate(); };
   if (focusId) document.getElementById('pd-' + focusId)?.scrollIntoView();
 }

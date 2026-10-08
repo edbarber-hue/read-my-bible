@@ -406,3 +406,14 @@ body.playing{overflow:hidden}
 }
 .pd-day.future{opacity:.45}
 .field textarea{font-family:inherit}
+
+/* ---------- Save to home screen pop-up ---------- */
+.a2hs-hero{display:flex;gap:12px;align-items:center;background:#fff;border:2px solid #ecd4b7;border-radius:16px;padding:10px 12px;margin:4px 0 14px}
+.a2hs-hero img{border-radius:14px;box-shadow:0 3px 0 #0002}
+.a2hs-hero b{display:block;font-size:17px}.a2hs-hero small{color:var(--muted)}
+.a2hs-steps{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.a2hs-step{display:flex;align-items:center;gap:12px;background:#fff8eb;border-radius:14px;padding:10px 12px;font-size:15.5px;line-height:1.35}
+.a2hs-num{flex:none;width:28px;height:28px;border-radius:50%;background:#c86354;color:#fff;font-weight:900;display:grid;place-items:center}
+.a2hs-icon{flex:none;width:42px;height:42px;border-radius:12px;background:#fff;border:2px solid #ecd4b7;display:grid;place-items:center;color:#2f6fe4}
+.a2hs-txt{font-size:13px;color:#2f6fe4}
+.pd-install{margin-top:14px}
