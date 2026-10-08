@@ -145,3 +145,5 @@ body.playing{overflow:hidden}
 .welcome-line{font-family:FavorSans,'DM Sans',sans-serif;font-size:21px!important;line-height:1.35!important;color:#fff8eb!important;margin:0 0 10px}
 .welcome-sub{margin:6px 0 0;color:#6b5a4a;font-weight:700;font-size:16px}
 .mute-button{margin-left:auto;margin-right:6px;font-size:18px}.mute-button.off{opacity:.6}
+.deep-badge{display:block;margin-bottom:4px;color:#b07a1c!important;font-weight:800}.bonus-note{color:#b07a1c!important;font-weight:700}.share-note{font-size:15px;text-align:center}
+.quiz-option:disabled{opacity:1;color:var(--ink)}.quiz-option:disabled:not(.correct):not(.wrong){opacity:.6}

@@ -21,7 +21,7 @@
   .verse{background:var(--paper);border-left:4px solid var(--gold);padding:8px 12px;border-radius:8px;margin:8px 0 12px;font-size:14px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .box h3{margin:0 0 6px;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--coral)}
-  .box.review h3{color:var(--green)}
+  .box.review h3{color:var(--green)}.box.bonus h3{color:#b07a1c}.box.bonus{background:#fff8e6;border-radius:10px;padding:8px}
   ol{margin:0;padding-left:20px}
   li{margin:0 0 8px}
   .q{font-weight:650}
@@ -46,12 +46,13 @@
   </div>
 </header>
 <main>
-  <div class="intro">Every question in the game, with the correct answer marked ✓. <b>Daily quiz</b> = the 3 questions after each day's reading. <b>Home quiz</b> = the extra question for that chapter used in the home-upgrade quiz. Ages 4–6 only read the one verse shown. Tick “Checked” as you go — ticks are saved in this browser only.</div>
+  <div class="intro">Every question in the game, with the correct answer marked ✓. <b>Daily quiz</b> = the 3 questions after each day's reading. <b>⭐ Bonus reflection</b> = free extra after every 3rd chapter (also added to the home quiz). <b>Home quiz</b> = the extra question for that chapter used in the home-upgrade quiz. Ages 4–6 only read the one verse shown. Tick “Checked” as you go — ticks are saved in this browser only.</div>
   <div id="list"></div>
 </main>
 <script src="net-matthew.js"></script>
 <script src="content.js"></script>
 <script src="review.js"></script>
+<script src="reflect.js"></script>
 <script>
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let checked={};try{checked=JSON.parse(localStorage.getItem('rmb-qa-checked')||'{}')}catch{}
@@ -64,6 +65,8 @@ document.getElementById('list').innerHTML=QUESTIONS.map((q,i)=>{const n=i+1,v=(w
     <div class="box big"><h3>Ages 7–12 · daily quiz</h3><div class="verse">Reads the whole chapter.</div><ol>${q.big.map(qItem).join('')}</ol></div>
     <div class="box review little"><h3>Ages 4–6 · home quiz</h3><ol>${qItem(REVIEW[i].little)}</ol></div>
     <div class="box review big"><h3>Ages 7–12 · home quiz</h3><ol>${qItem(REVIEW[i].big)}</ol></div>
+    ${REFLECT[n]?`<div class="box bonus little"><h3>⭐ Ages 4–6 · bonus reflection</h3><ol>${qItem(REFLECT[n].little)}</ol></div><div class="box bonus big"><h3>⭐ Ages 7–12 · bonus reflection</h3><ol>${qItem(REFLECT[n].big)}</ol>${REFLECT[n].bigType?`<small>Then: “${esc(REFLECT[n].bigType)}” → “${esc(REFLECT[n].bigDone)}”</small>`:''}</div>`:''}
+    ${REFLECT[n]?`<div class="box bonus little"><h3>⭐ Ages 4–6 · bonus reflection</h3><ol>${qItem(REFLECT[n].little)}</ol></div><div class="box bonus big"><h3>⭐ Ages 7–12 · bonus reflection</h3><ol>${qItem(REFLECT[n].big)}</ol>${REFLECT[n].bigType?`<small>Then: “${esc(REFLECT[n].bigType)}” → “${esc(REFLECT[n].bigDone)}”</small>`:''}</div>`:''}
   </div></section>`}).join('');
 document.querySelectorAll('[data-ch]').forEach(c=>c.onchange=()=>{checked[c.dataset.ch]=c.checked;try{localStorage.setItem('rmb-qa-checked',JSON.stringify(checked))}catch{}});
 const jump=document.getElementById('jump');jump.innerHTML='<option value="">Jump to…</option>'+QUESTIONS.map((q,i)=>`<option value="${i+1}">Matthew ${i+1}</option>`).join('');

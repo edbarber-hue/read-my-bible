@@ -139,6 +139,7 @@ function render() {
   $('#streakUnit').textContent = s === 1 ? 'day' : 'days';
   $('#streakBar').style.width = `${Math.min(28, s) / 28 * 100}%`;
   $('.streak-card').classList.toggle('lit', s > 0);
+  const deep = Object.keys(p.reflections || {}).length; $('#deepBadge').textContent = deep ? `⭐ Deep Thinker × ${deep}` : ''; $('#deepBadge').classList.toggle('hidden', !deep);
   $('#streakText').textContent = s >= 28 ? '28-day champion! Keep the fire going!' : s === 0 ? 'Read today to light your fire!' : done ? `Day ${s} of 28 · see you tomorrow!` : `Day ${s} of 28 · read today to keep it going!`;
 
   // Today
@@ -343,6 +344,9 @@ function finishQuiz() {
     $('#retryButton').onclick = () => startQuiz({ mode: quiz.mode, chapter: quiz.chapter, chapters: quiz.chapters, test: quiz.test });
     return;
   }
+  // Free bonus reflection question every 3rd chapter (and in the home quiz). It never blocks progress.
+  const bonusCh = quiz.mode === 'review' ? Math.max(...quiz.chapters) : quiz.chapter;
+  if (typeof REFLECT !== 'undefined' && REFLECT[bonusCh] && !quiz.bonusDone) { quiz.bonusDone = true; showBonus(p, bonusCh, finishQuiz); return; }
   if (quiz.mode === 'review' && quiz.test) { openModal(`${header('TEST MODE', 'Home quiz passed')}<p>In normal play this would upgrade the home. Nothing was saved.</p><button class="button primary wide" data-close>Close</button>`); return; }
   if (quiz.mode === 'review') return finishHomeQuiz(p);
   const n = quiz.chapter, isNew = !completed(p, n);
@@ -359,6 +363,26 @@ function finishQuiz() {
   if (catchUpOpen(p)) { const b = document.createElement('button'); b.className = 'button primary wide'; b.style.marginTop = '12px'; b.textContent = `Read Matthew ${nextChapter(p)} next`; b.onclick = () => showReading(todayChapter(p)); $('#modalCard').append(b); }
   $('#closeDone')?.addEventListener('click', closeModal);
   $('#finishNext').onclick = () => { closeModal(); openGame(); };
+}
+
+function showBonus(p, ch, done) {
+  const r = REFLECT[ch], little = p.age <= 6, row = little ? r.little : r.big, answers = shuffle(row.slice(1));
+  openModal(`${header('BONUS ⭐ THINK ABOUT IT', 'A question for your heart')}<p class="bonus-note">Free extra! Matthew ${ch <= 3 ? '1–3' : ch === 28 ? '28' : `${ch - 2}–${ch}`} · ${escapeHtml(r.title)}</p><h3 class="quiz-prompt">${escapeHtml(row[0])}</h3><div class="quiz-options">${answers.map((x, i) => `<button type="button" class="quiz-option" data-b="${i}">${escapeHtml(x)}</button>`).join('')}</div><div id="bonusAfter"></div>`);
+  $('#modalCard').querySelectorAll('[data-b]').forEach(b => b.onclick = () => {
+    const pick = answers[Number(b.dataset.b)], best = pick === row[1];
+    $('#modalCard').querySelectorAll('[data-b]').forEach(x => { x.disabled = true; if (answers[Number(x.dataset.b)] === row[1]) x.classList.add('correct'); });
+    if (best) { p.reflections = p.reflections || {}; p.reflections[ch] = true; save(); }
+    const typeBox = !little && r.bigType && best;
+    $('#bonusAfter').innerHTML = `<p class="quiz-feedback">${best ? '⭐ Deep Thinker! Great answer.' : `Good thinking! Here’s a great answer: <b>${escapeHtml(row[1])}</b>.`}</p>${typeBox ? `<label class="field">${escapeHtml(r.bigType)}<input id="bonusNames" maxlength="80" placeholder="e.g. my cousin Sam, my friend Ana"></label>` : ''}<button id="bonusNext" class="button primary wide">${typeBox ? 'Done' : 'Continue'}</button>`;
+    $('#bonusNext').onclick = () => {
+      if (typeBox) {
+        const names = $('#bonusNames').value.trim(); if (names) { p.shareWith = names; save(); }
+        $('#bonusAfter').innerHTML = `<div class="notice share-note">${escapeHtml(r.bigDone)}${names ? `<br><b>${escapeHtml(names)}</b>` : ''}</div><button id="bonusNext2" class="button primary wide">Continue</button>`;
+        $('#bonusNext2').onclick = done; return;
+      }
+      done();
+    };
+  });
 }
 
 // ---------- Home ----------
