@@ -384,6 +384,7 @@ function finishHomeQuiz(p) {
 const DECOR = {
   rug: { label: 'Carpet', files: ['rug-0', 'rug-1', 'rug-2', 'rug-3'], names: ['Woven mat', 'Braided rug', 'Pattern rug', 'Royal rug'], pos: { x: 50, y: 96 }, flat: true },
   couch: { label: 'Sofa', files: ['home-8', 'home-9', 'home-10', 'home-11'], names: ['Teal sofa', 'Coral sofa', 'Golden sofa', 'Sage sofa'], pos: { x: 24, y: 78 } },
+  stand: { label: 'TV stand', files: ['stand-0', 'stand-1', 'stand-2', 'stand-3'], names: ['Wooden stand', 'Teal cabinet', 'Coral cabinet', 'Royal cabinet'], pos: { x: 77, y: 80 } },
   tv: { label: 'TV', files: ['home-12', 'home-13', 'home-14', 'home-15'], names: ['Wooden TV', 'Teal TV', 'Big screen', 'Cream TV'], pos: { x: 77, y: 72 } },
   bible: { label: 'Bible', files: ['bible-0', 'bible-1', 'bible-2', 'bible-3'], names: ['First Bible', 'Explorer Bible', 'Adventure Bible', 'Treasure Bible'], pos: { x: 56, y: 80 } },
   plate: { label: 'Plate', files: ['home-4', 'home-5', 'home-6', 'home-7'], names: ['Teal plate', 'Coral plate', 'Flower plate', 'Sage dish'], pos: { x: 42, y: 86 } },
@@ -414,12 +415,12 @@ function renderHome(p) {
   $('#homeViewButton').textContent = inside ? 'Step outside' : 'Step inside';
   $('#homeCharacter').innerHTML = explorerMarkup(p);
   const items = inside ? DECOR : OUTDOOR, chosen = inside ? p.decor : p.outdoorDecor, positions = (inside ? p.decorPositions : p.outdoorPositions) || {};
-  let html = Object.keys(items).map(k => {
-    const idx = Math.min(chosen[k] || 0, items[k].names.length - 1), pos = positions[k] || items[k].pos;
-    return `<span class="placed-decor decor-${k} ${inside ? '' : 'outdoor-item'}" data-item="${k}" data-kind="${inside ? 'interior' : 'exterior'}" role="button" tabindex="0" aria-label="Drag to move ${items[k].names[idx]}" style="left:${pos.x}%;top:${pos.y}%;z-index:${items[k].flat ? 1 : Math.round(pos.y)}">${inside ? decorArt(k, idx) : outdoorArt(k, idx)}</span>`;
+  let html = Object.keys(items).filter(k => chosen[k] !== 'none' && k !== 'stand').map(k => {
+    const idx = Math.min(Number(chosen[k]) || 0, items[k].names.length - 1), pos = positions[k] || items[k].pos;
+    return `<span class="placed-decor decor-${k} ${inside ? '' : 'outdoor-item'}" data-item="${k}" data-kind="${inside ? 'interior' : 'exterior'}" role="button" tabindex="0" aria-label="Drag to move ${items[k].names[idx]}" style="left:${pos.x}%;top:${pos.y}%;z-index:${items[k].flat ? 1 : Math.round(pos.y)}">${inside ? (k === 'tv' && chosen.stand !== 'none' ? `<span class="tv-on-stand">${decorArt('tv', idx)}${decorArt('stand', Math.min(Number(chosen.stand) || 0, 3))}</span>` : decorArt(k, idx)) : outdoorArt(k, idx)}</span>`;
   }).join('');
-  if (!inside && CARS.length && stage > 0) {
-    const car = Math.min(p.carChoice ?? stage - 1, stage - 1), pos = positions.car || { x: 82, y: 66 };
+  if (!inside && CARS.length && stage > 0 && p.carChoice !== 'none') {
+    const car = Math.min(Number.isInteger(p.carChoice) ? p.carChoice : stage - 1, stage - 1), pos = positions.car || { x: 82, y: 66 };
     html += `<span class="placed-decor decor-car outdoor-item" data-item="car" data-kind="exterior" role="button" tabindex="0" aria-label="Drag to move ${CARS[car]}" style="left:${pos.x}%;top:${pos.y}%;z-index:${Math.round(pos.y)}">${carArt(car)}</span>`;
   }
   $('#homeDecor').innerHTML = html;
@@ -432,11 +433,12 @@ function renderHome(p) {
 function showHomeDecor() {
   const p = profile(); if (!p) return;
   const inside = !!p.homeInside, items = inside ? DECOR : OUTDOOR, store = inside ? p.decor : p.outdoorDecor, stage = homeStage(p);
-  const rows = Object.keys(items).map(k => `<div class="decor-row"><b>${items[k].label}</b><div>${items[k].names.map((name, i) => { const ok = decorUnlocked(p, i); return `<button class="decor-choice ${(store[k] || 0) === i ? 'active' : ''}" data-decor="${k}" data-value="${i}" ${ok ? '' : 'disabled'}>${inside ? decorArt(k, i, 'decor-thumbnail') : outdoorArt(k, i, 'decor-thumbnail')}<small>${ok ? name : `🔒 ${HOME_NAMES[i]}`}</small></button>`; }).join('')}</div></div>`).join('');
-  const cars = !inside && CARS.length ? `<div class="decor-row"><b>Car</b><div>${CARS.map((name, i) => { const ok = isMaster() || i < stage; return `<button class="decor-choice ${Math.min(p.carChoice ?? stage - 1, stage - 1) === i ? 'active' : ''}" data-car="${i}" ${ok ? '' : 'disabled'}>${carArt(i, 'decor-thumbnail')}<small>${ok ? name : `🔒 ${HOME_NAMES[i + 1]}`}</small></button>`; }).join('')}</div></div>` : '';
-  openModal(`${header('DECORATE', inside ? 'Your room' : 'Outside your home')}<p>New choices unlock as your home grows. Drag things around in your ${inside ? 'room' : 'yard'} to arrange them — they stay where you put them.</p>${rows}${cars}`);
-  $('#modalCard').querySelectorAll('[data-decor]').forEach(b => b.onclick = () => { store[b.dataset.decor] = Number(b.dataset.value); save(); render(); showHomeDecor(); });
-  $('#modalCard').querySelectorAll('[data-car]').forEach(b => b.onclick = () => { p.carChoice = Number(b.dataset.car); save(); render(); showHomeDecor(); });
+  const none = (attr, k, on) => `<button class="decor-choice none-choice ${on ? 'active' : ''}" ${attr}="${k}" data-value="none"><span class="decor-thumbnail none-thumb">✕</span><small>None</small></button>`;
+  const rows = Object.keys(items).map(k => `<div class="decor-row"><b>${items[k].label}</b><div>${none('data-decor', k, store[k] === 'none')}${items[k].names.map((name, i) => { const ok = decorUnlocked(p, i); return `<button class="decor-choice ${store[k] !== 'none' && (store[k] || 0) === i ? 'active' : ''}" data-decor="${k}" data-value="${i}" ${ok ? '' : 'disabled'}>${inside ? decorArt(k, i, 'decor-thumbnail') : outdoorArt(k, i, 'decor-thumbnail')}<small>${ok ? name : `🔒 ${HOME_NAMES[i]}`}</small></button>`; }).join('')}</div></div>`).join('');
+  const cars = !inside && CARS.length ? `<div class="decor-row"><b>Car</b><div>${none('data-car', 'car', p.carChoice === 'none')}${CARS.map((name, i) => { const ok = isMaster() || i < stage; return `<button class="decor-choice ${p.carChoice !== 'none' && Math.min(Number.isInteger(p.carChoice) ? p.carChoice : stage - 1, stage - 1) === i ? 'active' : ''}" data-car="${i}" ${ok ? '' : 'disabled'}>${carArt(i, 'decor-thumbnail')}<small>${ok ? name : `🔒 ${HOME_NAMES[i + 1]}`}</small></button>`; }).join('')}</div></div>` : '';
+  openModal(`${header('DECORATE', inside ? 'Your room' : 'Outside your home')}<p>Pick “None” to leave something out. New choices unlock as your home grows. Drag things around in your ${inside ? 'room' : 'yard'} to arrange them — they stay where you put them.</p>${rows}${cars}`);
+  $('#modalCard').querySelectorAll('[data-decor]').forEach(b => b.onclick = () => { store[b.dataset.decor] = b.dataset.value === 'none' ? 'none' : Number(b.dataset.value); save(); render(); showHomeDecor(); });
+  $('#modalCard').querySelectorAll('[data-car]').forEach(b => b.onclick = () => { p.carChoice = b.dataset.value === 'none' ? 'none' : Number(b.dataset.car); save(); render(); showHomeDecor(); });
 }
 
 // ---------- Wardrobe modal ----------
