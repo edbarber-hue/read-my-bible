@@ -1,6 +1,6 @@
 // Sky Run — original side-view runner. Hold to fly, release to fall.
 const canvas = $('#gameCanvas'), ctx = canvas.getContext('2d');
-const W = 960, H = 540, PX = 200;
+const W = 960, H = 540, PX = 200, MAX_HEARTS = 5;
 const FLIGHT_OUTFITS = ['coral-scout', 'sky-pilot', 'forest-ranger', 'royal-adventurer', 'sunset-surfer', 'golden-guardian', 'night-explorer', 'ocean-voyager'];
 let game = null, hold = false, frameId = 0, lastTime = 0;
 const testOpts = { invincible: false, startAt2000: false, startPower: false };
@@ -58,7 +58,7 @@ function startRun() {
   const p = profile(), master = isMaster();
   game = {
     running: true, y: 265, vy: 0, score: master && testOpts.startAt2000 ? 1990 : 0, gems: 0, stars: 0, hearts: 3, t: 0,
-    spawn: 50, spawns: 0, hazards: [], gemList: [], starList: [], powerups: [], shots: [], lasers: [], particles: [], rings: [], popups: [], heartFx: [],
+    spawn: 50, spawns: 0, hazards: [], gemList: [], starList: [], powerups: [], heartUps: [], nextHeartT: 900, shots: [], lasers: [], particles: [], rings: [], popups: [], heartFx: [],
     invuln: 0, hurt: 0, shine: 0, power: master && testOpts.startPower ? 420 : 0, throwT: 0, throwCd: 0, nextPowerT: 600, ufo: null, nextUfo: 2000, ufosBeaten: 0,
     shake: 0, dying: 0, missionDone: false, little: p.age <= 6, invincible: master && testOpts.invincible
   };
@@ -139,11 +139,13 @@ function step(dt) {
   if (g.dying) { g.particles.forEach(o => { o.x += o.vx * dt; o.y += o.vy * dt; o.life -= dt; }); g.heartFx.forEach(h => h.t += dt); g.rings.forEach(r => { r.life -= dt; r.r += (r.max - r.r) * .2 * dt; }); g.popups.forEach(o => { o.y -= dt * .6; o.life -= dt; }); return; }
   // Spawns
   if ((g.spawn -= dt) <= 0) spawnWave();
+  // Floating hearts give back a life (up to 5). They come sooner when you're low.
+  if (g.t >= g.nextHeartT) { if (g.hearts < MAX_HEARTS) g.heartUps.push({ x: 1010, y: 100 + Math.random() * 320, phase: 0 }); g.nextHeartT = g.t + (g.hearts <= 1 ? 600 : g.hearts === 2 ? 1000 : 1700) + Math.random() * 500; }
   if (g.t >= g.nextPowerT) { g.powerups.push({ x: 1010, y: 110 + Math.random() * 300, phase: 0 }); g.nextPowerT = g.t + (g.ufo ? 520 : 1400) + Math.random() * 400; }
   if (!g.ufo && g.score >= g.nextUfo) spawnUfo();
   const speed = (4.3 + Math.min(8.5, g.score / 190)) * (g.little ? .8 : 1) * dt;
   for (const o of g.hazards) { o.x -= speed; o.phase += dt * .05; if (o.spin) o.angle += o.spin * dt; if (o.hitT) o.hitT = Math.max(0, o.hitT - dt); }
-  for (const o of [...g.gemList, ...g.starList, ...g.powerups]) { o.x -= speed; o.phase += dt * .09; }
+  for (const o of [...g.gemList, ...g.starList, ...g.powerups, ...g.heartUps]) { o.x -= speed; o.phase += dt * .09; }
   for (const o of g.particles) { o.x += o.vx * dt; o.y += o.vy * dt; o.vy += .05 * dt; o.life -= dt; }
   for (const r of g.rings) { r.life -= dt; r.r += (r.max - r.r) * .2 * dt; }
   for (const o of g.popups) { o.y -= dt * .7; o.life -= dt; }
@@ -154,6 +156,10 @@ function step(dt) {
   for (const o of g.gemList) if (!o.hit && Math.hypot(o.x - PX, o.y - py) < 34) { o.hit = true; g.gems++; SkyAudio.sfx('gem'); g.score += 10; burst(o.x, o.y, '#9ff3ff', 8, 3); if (g.gems >= 10 && !g.missionDone) { g.missionDone = true; $('#missionText').textContent = 'Mission complete! Keep collecting gems'; popup('Mission complete!', PX + 80, py - 60, '#fff3a6'); } }
   // Stars: shine + protection
   for (const o of g.starList) if (!o.hit && Math.hypot(o.x - PX, o.y - py) < 36) { o.hit = true; g.stars++; SkyAudio.sfx('star'); g.score += 40; g.shine = 150; g.invuln = Math.max(g.invuln, 120); burst(o.x, o.y, '#ffe473', 26, 5); ring(o.x, o.y, '#fff3a6', 80); popup('Shine!', o.x, o.y - 26, '#fff3a6'); }
+  for (const o of g.heartUps) if (!o.hit && Math.hypot(o.x - PX, o.y + Math.sin(o.phase) * 6 - py) < 42) {
+    o.hit = true; if (g.hearts < MAX_HEARTS) { g.hearts++; g.heartGain = { i: g.hearts - 1, t: 0 }; }
+    SkyAudio.sfx('heart'); burst(o.x, o.y, '#ff6b78', 20, 5); ring(o.x, o.y, '#ff9aa5', 80); popup('+1 life!', o.x, o.y - 34, '#ffd7d2');
+  }
   // Power-up: Bible pages
   for (const o of g.powerups) if (!o.hit && Math.hypot(o.x - PX, o.y + Math.sin(o.phase) * 6 - py) < 42) { o.hit = true; g.power = 420; SkyAudio.sfx('power'); g.throwCd = 6; burst(o.x, o.y, '#fff1b0', 24, 5); ring(o.x, o.y, '#ffd45b', 90); popup('Bible pages!', o.x, o.y - 34, '#fff3a6'); }
   // Hazards
@@ -189,7 +195,7 @@ function step(dt) {
   if (up && Math.random() < .85) { const trail = equippedCosmetic(profile(), 'trail'); g.particles.push({ x: PX - 30, y: g.y + 22, vx: -2 - Math.random() * 3, vy: (Math.random() - .5) * 3, life: 24, color: trail?.id === 'sky-bolt' ? ['#22cbff', '#0035e3', '#ffffff'][Math.floor(Math.random() * 3)] : trail?.colors[0] || '#ffd16a', kind: trail?.id || 'spark', size: 5 }); }
   // Clean up
   g.hazards = g.hazards.filter(o => o.x > -140 && !(o.dead && o.deadT-- <= 0));
-  g.gemList = g.gemList.filter(o => o.x > -30 && !o.hit); g.starList = g.starList.filter(o => o.x > -30 && !o.hit); g.powerups = g.powerups.filter(o => o.x > -40 && !o.hit);
+  g.gemList = g.gemList.filter(o => o.x > -30 && !o.hit); g.starList = g.starList.filter(o => o.x > -30 && !o.hit); g.powerups = g.powerups.filter(o => o.x > -40 && !o.hit); g.heartUps = g.heartUps.filter(o => o.x > -40 && !o.hit);
   g.shots = g.shots.filter(s => !s.hit && s.x < 1000 && s.y > -30 && s.y < 570); g.lasers = g.lasers.filter(l => !l.hit && l.x > -30 && l.y > -30 && l.y < 570);
   g.particles = g.particles.filter(o => o.life > 0); g.rings = g.rings.filter(r => r.life > 0); g.popups = g.popups.filter(o => o.life > 0); g.heartFx = g.heartFx.filter(h => h.t < 70);
   updateHud();
@@ -349,11 +355,13 @@ function drawHeart(cx, cy, s, mode = 'full') {
   ctx.beginPath(); ctx.ellipse(cx - s * .38, cy - s * .55, s * .16, s * .1, -.6, 0, Math.PI * 2); ctx.fillStyle = '#ffffffc0'; ctx.fill();
 }
 function drawHearts() {
-  const size = 22, gap = 52, y0 = 40;
-  for (let i = 0; i < 3; i++) {
+  const size = 22, gap = 52, y0 = 40, slots = Math.max(3, game.hearts, ...game.heartFx.map(h => h.i + 1));
+  if (game.heartGain) game.heartGain.t += 1;
+  for (let i = 0; i < slots; i++) {
     const cx = 34 + i * gap, fx = game.heartFx.find(h => h.i === i);
     if (i < game.hearts) {
-      const pulse = game.hearts === 1 ? 1 + Math.sin(game.t * .2) * .08 : 1;
+      let pulse = game.hearts === 1 ? 1 + Math.sin(game.t * .2) * .08 : 1;
+      if (game.heartGain?.i === i && game.heartGain.t < 30) pulse = 1 + Math.sin(game.heartGain.t / 30 * Math.PI) * .6;
       drawHeart(cx, y0, size * pulse);
     } else if (fx && fx.t < 30) {
       // blink, getting bigger
@@ -423,6 +431,7 @@ function drawGame() {
   drawBackground(t);
   g.gemList.forEach(drawGem); g.starList.forEach(drawStar);
   g.powerups.forEach(o => drawBook(o.x, o.y + Math.sin(o.phase) * 6));
+  g.heartUps.forEach(o => { ctx.save(); const yy = o.y + Math.sin(o.phase) * 6, pulse = 1 + Math.sin(o.phase * 2) * .08; ctx.shadowColor = '#ff6b78'; ctx.shadowBlur = 20; ctx.beginPath(); ctx.arc(o.x, yy, 30, 0, Math.PI * 2); ctx.fillStyle = '#ffffff55'; ctx.fill(); ctx.shadowBlur = 0; drawHeart(o.x, yy + 4, 20 * pulse); ctx.restore(); });
   g.hazards.forEach(o => { if (!o.dead) o.kind === 'gear' ? drawGear(o) : drawZap(o); });
   if (g.ufo) drawUfo(g.ufo);
   g.lasers.forEach(drawLaser);
@@ -448,7 +457,7 @@ function drawPlayPreview(p) {
     t: 120, y: 250, vy: -2, hearts: 3, gems: 0, stars: 0, power: 0, throwT: 0, shine: 0, invuln: 0, hurt: 0, shake: 0,
     hazards: [{ kind: 'gear', x: 455, y: 320, r: 30, colors: COLORS_GEAR[2], phase: 1.2, bob: 0 }, { kind: 'zap', x: 560, y: 225, len: 120, angle: Math.PI / 2, spin: 0, phase: 0 }],
     gemList: [0, 1, 2, 3].map(i => ({ x: 310 + i * 40, y: 175 + Math.sin(i * .9) * 12, phase: i })), starList: [{ x: 500, y: 140, phase: 0 }],
-    powerups: [], shots: [], lasers: [], particles: [], rings: [], popups: [], heartFx: [], ufo: null
+    powerups: [], heartUps: [{ x: 560, y: 330, phase: 0 }], shots: [], lasers: [], particles: [], rings: [], popups: [], heartFx: [], ufo: null
   };
   const draw = () => {
     if (game?.running) return;

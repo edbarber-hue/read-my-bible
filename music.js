@@ -106,6 +106,7 @@ const SkyAudio = (() => {
     flame: (d, t) => { noise(d, t, 0.5, 0.18, 600); tone(d, 'sine', 180, t, 0.4, 0.15, 420); },
     equip: (d, t) => { tone(d, 'sine', 660, t, 0.08, 0.18); tone(d, 'sine', 990, t + 0.06, 0.12, 0.18); },
     place: (d, t) => tone(d, 'sine', 240, t, 0.1, 0.25, 160),
+    heart: (d, t) => [659, 880, 1109, 1319].forEach((f, i) => tone(d, 'sine', f, t + i * 0.06, 0.22, 0.25)),
     bonus: (d, t) => [1319, 1568, 1976, 2637].forEach((f, i) => tone(d, 'sine', f, t + i * 0.07, 0.3, 0.16)),
   };
   return {
