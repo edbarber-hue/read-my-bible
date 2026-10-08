@@ -37,7 +37,7 @@
 </head>
 <body>
 <header>
-  <h1>Question check · Matthew 1–28</h1>
+  <h1>Questions & prompts · Matthew 1–28</h1>
   <div class="tools">
     <button data-show="all" aria-pressed="true">All</button>
     <button data-show="little" aria-pressed="false">Ages 4–6</button>
@@ -47,7 +47,10 @@
 </header>
 <main>
   <div class="intro">Every question in the game, with the correct answer marked ✓. <b>Daily quiz</b> = the 3 questions after each day's reading. <b>⭐ Bonus reflection</b> = free extra after every 3rd chapter (also added to the home quiz). <b>Home quiz</b> = the extra question for that chapter used in the home-upgrade quiz. Ages 4–6 only read the one verse shown. Tick “Checked” as you go — ticks are saved in this browser only.</div>
-  <div id="list"></div>
+  <section id="moments"><h2>💛 Kids’ Heart Moments (pop-up after every chapter)</h2><p class="intro" style="margin:6px 0 12px">After passing each chapter’s quiz, kids get one of these, in this order (chapter 1 → #1, chapter 2 → #2 … chapter 8 → #1 again). Kids can type or record any of them (ages 4–6 start on recording) and can tap “Skip for today”. Answers go to the parents’ “What they said” tab.</p><ol id="hmList"></ol>
+<h3 style="margin-top:14px">⭐ Bonus reflection (chapters 3, 6, 9 … 27, and 28)</h3><p class="intro" style="margin:6px 0 0">Shown before the heart moment on those chapters — the questions are in each chapter below (yellow boxes). Parents see the question and the answer their child picked.</p>
+<h3 style="margin-top:14px">👪 Where parents see it</h3><p class="intro" style="margin:6px 0 0">Top of the site → <b>Parents</b> → enter the parent code → each child’s card → <b>💛 What they said</b> tab. Every entry shows <b>We asked them:</b> and <b>They said:</b> — typed words, or a ▶ play button for recordings. The <b>💬 Questions to reflect</b> tab has the two talk-together questions for any chapter.</p></section>
+<div id="list"></div>
 </main>
 <script src="net-matthew.js"></script>
 <script src="content.js"></script>
@@ -70,6 +73,7 @@ document.getElementById('list').innerHTML=QUESTIONS.map((q,i)=>{const n=i+1,v=(w
     ${REFLECT[n]?`<div class="box bonus little"><h3>⭐ Ages 4–6 · bonus reflection</h3><ol>${qItem(REFLECT[n].little)}</ol></div><div class="box bonus big"><h3>⭐ Ages 7–12 · bonus reflection</h3><ol>${qItem(REFLECT[n].big)}</ol>${REFLECT[n].bigType?`<small>Then: “${esc(REFLECT[n].bigType)}” → “${esc(REFLECT[n].bigDone)}”</small>`:''}</div>`:''}
     ${REFLECT[n]?`<div class="box bonus little"><h3>⭐ Ages 4–6 · bonus reflection</h3><ol>${qItem(REFLECT[n].little)}</ol></div><div class="box bonus big"><h3>⭐ Ages 7–12 · bonus reflection</h3><ol>${qItem(REFLECT[n].big)}</ol>${REFLECT[n].bigType?`<small>Then: “${esc(REFLECT[n].bigType)}” → “${esc(REFLECT[n].bigDone)}”</small>`:''}</div>`:''}
   </div></section>`}).join('');
+document.getElementById('hmList').innerHTML=HEART_MOMENTS.map((m,i)=>`<li><b>${esc(m.title)}</b> <small>(${m.kind==='record'?'🎤 record a message':m.kind==='pray'?'🙏 two answers':'✏️ type a name'})</small><div class="q">${esc(m.prompt)}${m.prompt2?' / '+esc(m.prompt2):''}</div></li>`).join('');
 document.querySelectorAll('[data-ch]').forEach(c=>c.onchange=()=>{checked[c.dataset.ch]=c.checked;try{localStorage.setItem('rmb-qa-checked',JSON.stringify(checked))}catch{}});
 const jump=document.getElementById('jump');jump.innerHTML='<option value="">Jump to…</option>'+QUESTIONS.map((q,i)=>`<option value="${i+1}">Matthew ${i+1}</option>`).join('');
 jump.onchange=()=>{if(jump.value)document.getElementById('ch'+jump.value).scrollIntoView({behavior:'smooth'})};
