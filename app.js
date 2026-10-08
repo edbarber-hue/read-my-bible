@@ -567,7 +567,7 @@ function showSettings() {
     <label class="setting-row"><span>Music volume</span><input type="range" id="setMusicVol" min="0" max="1" step="0.05" value="${s.musicVol}"></label>
     ${sw('setSfx', s.sfx, '🔔 Sound effects')}
     <label class="setting-row"><span>Effects volume</span><input type="range" id="setSfxVol" min="0" max="1" step="0.05" value="${s.sfxVol}"></label>
-    <label class="field">Home music<select id="setHome"><option value="home">${T.home.name}</option><option value="rmb26">${T.rmb26.name}</option><option value="off">Off</option></select></label>
+    <label class="field">Home music<select id="setHome"><option value="rmb26">${T.rmb26.name}</option><option value="home">${T.home.name}</option><option value="off">Off</option></select></label>
     <label class="field">Sky Run music<select id="setRun"><option value="skyrun">Sky Run adventure</option><option value="retro">Retro arcade</option></select></label>
     <button id="setDone" class="button primary wide">Done</button>`);
   $('#setHome').value = s.homeTrack; $('#setRun').value = s.runTrack;

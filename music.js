@@ -1,12 +1,11 @@
 // Read My Bible audio: background music (mp3 loops), Sky Run music, sound effects, and per-device settings.
 const SkyAudio = (() => {
-  const DEFAULTS = { music: true, sfx: true, musicVol: 0.6, sfxVol: 0.8, homeTrack: 'home', runTrack: 'skyrun' };
-  let set = { ...DEFAULTS }; try { set = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('rmb-audio') || '{}') }; } catch { }
-  const saveSet = () => { try { localStorage.setItem('rmb-audio', JSON.stringify(set)); } catch { } };
+  const DEFAULTS = { music: true, sfx: true, musicVol: 0.6, sfxVol: 0.8, homeTrack: 'rmb26', runTrack: 'skyrun' };
+  let set = { ...DEFAULTS }; try { set = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('rmb-audio2') || '{}') }; } catch { }
+  const saveSet = () => { try { localStorage.setItem('rmb-audio2', JSON.stringify(set)); } catch { } };
   const TRACKS = {
     home: { file: 'music/bgm-home.mp3', name: 'Calm adventure' },
-    rmb26: { file: 'music/rmb26-background-soft.mp3', name: 'Read My Bible song (no lyrics)' },
-    reading: { file: 'music/bgm-reading.mp3', name: 'Quiet reading' },
+    rmb26: { file: 'music/rmb26-loop.mp3', name: 'Read My Bible song (no lyrics)' },
     skyrun: { file: 'music/bgm-skyrun.mp3', name: 'Sky Run' },
     ufo: { file: 'music/bgm-ufo.mp3', name: 'UFO battle' },
     win: { file: 'music/jingle-win.mp3', name: 'Victory' }
@@ -35,7 +34,7 @@ const SkyAudio = (() => {
     if (current?.id === id) return;
     const buf = await load(id); if (!buf || wanted !== id) return;
     const old = current, src = ac.createBufferSource(), g = ac.createGain();
-    src.buffer = buf; src.loop = loop; g.gain.setValueAtTime(0.0001, ac.currentTime); g.gain.exponentialRampToValueAtTime(1, ac.currentTime + fade);
+    src.buffer = buf; src.loop = loop; if (loop) { src.loopStart = 0.026; src.loopEnd = buf.duration - 0.03; }   // skip mp3 encoder padding for a gapless loop g.gain.setValueAtTime(0.0001, ac.currentTime); g.gain.exponentialRampToValueAtTime(1, ac.currentTime + fade);
     src.connect(g); g.connect(musicGain); src.start();
     current = { id, src, g };
     if (old) { old.g.gain.setTargetAtTime(0.0001, ac.currentTime, fade / 3); setTimeout(() => { try { old.src.stop(); } catch { } }, fade * 1500); }
@@ -45,7 +44,7 @@ const SkyAudio = (() => {
   // The game asks for a "scene"; settings decide which track that means.
   function scene(name) {
     if (name === 'home') return set.homeTrack === 'off' ? stopMusic() : play(set.homeTrack);
-    if (name === 'reading') return play('reading');
+    if (name === 'reading') return set.homeTrack === 'off' ? stopMusic() : play(set.homeTrack);   // reading keeps the home song going
     if (name === 'run') return set.runTrack === 'retro' ? (stopMusic(), chip.start()) : play('skyrun');
     if (name === 'ufo') return set.runTrack === 'retro' ? null : play('ufo', { fade: 0.4 });
     if (name === 'none') { chip.stop(); return stopMusic(); }
