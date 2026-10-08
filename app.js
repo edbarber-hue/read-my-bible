@@ -124,7 +124,7 @@ function toast(msg) { const n = document.createElement('div'); n.className = 'to
 // ---------- Dashboard ----------
 function render() {
   const p = profile();
-  ['#dashboard', '#homeBase', '#outfitSection'].forEach(s => $(s).classList.toggle('hidden', !p));
+  ['#dashboard', '#homeBase', '#readRow', '#playRow', '#outfitSection'].forEach(s => $(s).classList.toggle('hidden', !p));
   $('#hero').classList.toggle('hidden', !!p);
   $('#testBadge').classList.toggle('hidden', !isMaster());
   const unseen = state.profiles.reduce((n, k) => n + Math.max(0, (k.journal || []).length - (k.journalSeen || 0)), 0); $('#parentsButton').dataset.badge = unseen ? unseen : ''; 
@@ -141,6 +141,9 @@ function render() {
   const heat = Math.min(1, s / 14); const card = $('.streak-card'); card.style.setProperty('--heat', heat.toFixed(3)); card.dataset.heat = s >= 14 ? 'blaze' : s >= 7 ? 'hot' : s >= 3 ? 'warm' : s > 0 ? 'lit' : 'out';
   const read = Math.min(28, p.completed.length); $('#bookText').textContent = `${read} / 28 chapters`; $('#bookBar').style.width = `${read / 28 * 100}%`;
   $('.streak-card').classList.toggle('lit', s > 0);
+  $('#streakHeadline').textContent = s >= 14 ? 'Blazing! You’re unstoppable!' : s >= 7 ? 'You’re on fire!' : s >= 3 ? 'Your fire is getting bigger!' : s > 0 ? 'Your fire is lit!' : 'Light your fire!';
+  const wk = Array.from({ length: 7 }, (_, i) => addDays(todayKey(), i - 6));
+  $('#streakWeek').innerHTML = wk.map((d, i) => { const on = (p.dailyPass || {})[d] != null || (testView.streak != null && 6 - i < testView.streak); return `<span class="sw-day ${on ? 'on' : ''} ${i === 6 ? 'today' : ''}"><i>${on ? '🔥' : ''}</i><b>${i === 6 ? 'Today' : new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short' })}</b></span>`; }).join('');
   const deep = Object.keys(p.reflections || {}).length; $('#deepBadge').textContent = deep ? `⭐ Deep Thinker × ${deep}` : ''; $('#deepBadge').classList.toggle('hidden', !deep);
   $('#streakText').textContent = s >= 28 ? '28-day champion! Keep the fire going!' : s === 0 ? 'Read today to light your fire!' : done ? `Day ${s} of 28 · see you tomorrow!` : `Day ${s} of 28 · read today to keep it going!`;
 

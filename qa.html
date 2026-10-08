@@ -71,7 +71,6 @@ document.getElementById('list').innerHTML=QUESTIONS.map((q,i)=>{const n=i+1,v=(w
     <div class="box review big"><h3>Ages 7–12 · home quiz</h3><ol>${qItem(REVIEW[i].big)}</ol></div>
     <div class="box parent"><h3>👪 Parent conversation starters</h3><ol>${(PARENT_TALK[n]||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>
     ${REFLECT[n]?`<div class="box bonus little"><h3>⭐ Ages 4–6 · bonus reflection</h3><ol>${qItem(REFLECT[n].little)}</ol></div><div class="box bonus big"><h3>⭐ Ages 7–12 · bonus reflection</h3><ol>${qItem(REFLECT[n].big)}</ol>${REFLECT[n].bigType?`<small>Then: “${esc(REFLECT[n].bigType)}” → “${esc(REFLECT[n].bigDone)}”</small>`:''}</div>`:''}
-    ${REFLECT[n]?`<div class="box bonus little"><h3>⭐ Ages 4–6 · bonus reflection</h3><ol>${qItem(REFLECT[n].little)}</ol></div><div class="box bonus big"><h3>⭐ Ages 7–12 · bonus reflection</h3><ol>${qItem(REFLECT[n].big)}</ol>${REFLECT[n].bigType?`<small>Then: “${esc(REFLECT[n].bigType)}” → “${esc(REFLECT[n].bigDone)}”</small>`:''}</div>`:''}
   </div></section>`}).join('');
 document.getElementById('hmList').innerHTML=HEART_MOMENTS.map((m,i)=>`<li><b>${esc(m.title)}</b> <small>(${m.kind==='record'?'🎤 record a message':m.kind==='pray'?'🙏 two answers':'✏️ type a name'})</small><div class="q">${esc(m.prompt)}${m.prompt2?' / '+esc(m.prompt2):''}</div></li>`).join('');
 document.querySelectorAll('[data-ch]').forEach(c=>c.onchange=()=>{checked[c.dataset.ch]=c.checked;try{localStorage.setItem('rmb-qa-checked',JSON.stringify(checked))}catch{}});

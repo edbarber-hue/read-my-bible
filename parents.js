@@ -3,7 +3,7 @@
 //   2) a "share together" question that you BOTH answer (you go first!) to grow closer to each other and to Jesus.
 const PARENT_TALK = {
   1: ['God gave Jesus the name Immanuel, “God with us.” When do you most need to know God is with you?', 'Share together: tell each other about a time you felt God was close to you.'],
-  2: ['The wise men brought Jesus their best gifts. What is something special you could give to Jesus?', 'Share together: what is the best gift someone in our family ever gave you, and why did it mean so much?'],
+  2: ['The wise men traveled a long, long way just to be near Jesus and give Him their very best. What’s the best gift you’ve ever received? What made it so special to you?', 'Share together: what’s something special we could bring to Jesus? It doesn’t have to come in a box. It could be our time, our attention, our focus. The best present we can give Him is being present with Him, and He wants all of us because He loves us so much. Talk about one way each of you can give Jesus a little of your time this week.'],
   3: ['God said Jesus was his Son he loves and delights in. How does it feel to know God delights in you too?', 'Share together: tell each other one thing you love and are proud of about the other person.'],
   4: ['Jesus said no to temptation by remembering God’s words. What is something that is hard for you to say no to?', 'Share together: what is something you’re each trying to get better at? How can we cheer each other on this week?'],
   5: ['Jesus said you are the light of the world. When do you feel brave enough to shine?', 'Share together: who is someone that has been a light to you? Let’s thank God for them.'],
