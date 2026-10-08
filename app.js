@@ -167,6 +167,7 @@ function render() {
   renderLoadout(p);
   renderHome(p);
   drawPlayPreview(p);
+  setTimeout(() => maybeWelcome(profile()), 300);
   if (p.completed.length === 28 && !p.congratsShown) { p.congratsShown = true; save(); setTimeout(showCongratulations, 400); }
 }
 function renderLoadout(p) {
@@ -180,6 +181,29 @@ function renderLoadout(p) {
 function showCongratulations() {
   openModal(`${header('YOU DID IT', 'Matthew complete!')}<p>You read all 28 chapters of Matthew. What an adventure! Reading it again helps you notice something new every time, so tomorrow you’ll start again at Matthew 1. Keep your streak going!</p><div class="notice">Every reading reward is now unlocked for this explorer.</div><button id="congratsDone" class="button primary wide">Keep exploring</button>`);
   $('#congratsDone').onclick = closeModal;
+}
+
+// ---------- New-day welcome: Day N shakes, bursts, the fire grows, and it becomes Day N+1 (can't be skipped) ----------
+let welcomeBusy = false;
+function maybeWelcome(p) {
+  if (!p || welcomeBusy || p.lastWelcome === todayKey() || !$('#gameLayer').classList.contains('hidden')) return;
+  welcomeBusy = true;
+  const days = Object.keys(p.dailyPass || {}).filter(d => d !== todayKey()).length, from = days, to = days + 1;
+  const heat = Math.min(1, streak(p) / 14), first = from === 0;
+  const el = document.createElement('div'); el.className = 'day-welcome'; el.style.setProperty('--heat', heat);
+  el.innerHTML = `<div class="dw-inner"><div class="dw-hello">${first ? `Welcome, ${escapeHtml(firstName(p))}!` : `Welcome back, ${escapeHtml(firstName(p))}!`}</div>
+    <div class="dw-stage"><div class="dw-fire"><i></i><b></b></div><div class="dw-day"><small>DAY</small><span id="dwNum">${from}</span></div></div>
+    <div class="dw-msg" id="dwMsg">${first ? 'Your adventure starts today!' : 'A new day to read your Bible!'}</div>
+    <button class="button primary dw-go" id="dwGo">${first ? 'Light my fire! 🔥' : 'Start Day ' + to + '! 🔥'}</button></div>`;
+  document.body.append(el);
+  // The button is the "go" tap (phones only allow sound after a tap); after that the animation can't be skipped.
+  $('#dwGo').onclick = () => {
+    $('#dwGo').remove(); SkyAudio.unlock(); SkyAudio.sfx('rumble'); el.classList.add('shake');
+    setTimeout(() => { el.classList.remove('shake'); el.classList.add('burst'); SkyAudio.sfx('ignite'); el.style.setProperty('--heat', Math.min(1, heat + 0.35)); $('#dwNum').textContent = to; }, 2200);
+    setTimeout(() => { $('#dwMsg').innerHTML = first ? `It’s <b>Day 1</b>! Let’s read together!` : `It’s <b>Day ${to}</b>! Keep the fire burning!`; el.classList.add('glow'); }, 2600);
+    setTimeout(() => { el.classList.add('out'); }, 4600);
+    setTimeout(() => { el.remove(); welcomeBusy = false; p.lastWelcome = todayKey(); save(); SkyAudio.scene('home'); window.__musicStarted = true; }, 5200);
+  };
 }
 
 // ---------- Profiles modal ----------
@@ -608,7 +632,7 @@ function showGrownUps() {
     return;
   }
   const p = profile();
-  openModal(`${header('TEST MODE', 'Grown-up tools')}<p>Test mode is on for this device. Every look, decoration, and Sky Run is unlocked, and quizzes can be skipped. Skipping a quiz <b>does</b> mark the chapter as read for the current explorer, so use a test explorer for that.</p>${p ? `<div class="builder-section"><b>Preview home stage (not saved)</b><div class="test-row">${HOME_NAMES.map((n, i) => `<button class="button small ${homeStage(p) === i ? 'dark' : 'secondary'}" data-stage="${i}">${n}</button>`).join('')}<button class="button small ghost" data-stage="-1">Real</button></div></div><div class="builder-section"><b>Preview streak flame (not saved)</b><div class="test-row"><input type="range" id="testFlame" min="0" max="30" step="1" value="${testView.streak ?? streak(p)}" style="flex:1"><b id="testFlameN">${testView.streak ?? streak(p)} days</b><button class="button small ghost" id="testFlameReal">Real</button></div><div class="test-row">${[0, 1, 3, 7, 14, 28].map(n => `<button class="button small secondary" data-flame="${n}">${n}</button>`).join('')}</div></div><div class="builder-section"><b>Try the kids’ pop-ups (answers are saved for the current explorer)</b><div class="test-row">${HEART_MOMENTS.map((m, i) => `<button class="button small secondary" data-tryhm="${i}">${i + 1}. ${m.kind === 'record' ? '🎤' : m.kind === 'pray' ? '🙏' : '✏️'} ${escapeHtml(m.prompt.split('?')[0].slice(0, 34))}…</button>`).join('')}</div><b style="display:block;margin-top:8px">Bonus questions (question 4 of the quiz)</b><div class="test-row">${Object.keys(REFLECT).map(c => `<button class="button small secondary" data-trybonus="${c}">Matthew ${c}</button>`).join('')}</div><div class="test-row"><button class="button small dark" id="tryParents">See answers in parent dashboard →</button><button class="button small ghost" id="tryAge">Showing ages ${p && p.age <= 6 ? '4–6' : '7–12'} version — explorer age decides</button></div></div><div class="builder-section"><b>Reading</b><div class="test-row"><button id="testMap" class="button small secondary">Open any chapter</button><button id="testHomeQuiz" class="button small secondary">Try a home quiz</button></div></div>` : ''}<div class="builder-section"><b>Sky Run</b><p class="fineprint">Start Sky Run normally — test options (start at 2,000 for the UFO, unlimited hearts, Bible pages) appear on its start screen.</p></div><a class="button secondary wide" href="qa.html" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:block;margin-bottom:10px">Check all quiz questions (one page) →</a><button id="masterOff" class="button secondary wide">Turn off test mode</button>`);
+  openModal(`${header('TEST MODE', 'Grown-up tools')}<p>Test mode is on for this device. Every look, decoration, and Sky Run is unlocked, and quizzes can be skipped. Skipping a quiz <b>does</b> mark the chapter as read for the current explorer, so use a test explorer for that.</p>${p ? `<div class="builder-section"><b>Preview home stage (not saved)</b><div class="test-row">${HOME_NAMES.map((n, i) => `<button class="button small ${homeStage(p) === i ? 'dark' : 'secondary'}" data-stage="${i}">${n}</button>`).join('')}<button class="button small ghost" data-stage="-1">Real</button></div></div><div class="builder-section"><b>Preview streak flame (not saved)</b><div class="test-row"><input type="range" id="testFlame" min="0" max="30" step="1" value="${testView.streak ?? streak(p)}" style="flex:1"><b id="testFlameN">${testView.streak ?? streak(p)} days</b><button class="button small ghost" id="testFlameReal">Real</button></div><div class="test-row">${[0, 1, 3, 7, 14, 28].map(n => `<button class="button small secondary" data-flame="${n}">${n}</button>`).join('')}</div></div><div class="builder-section"><b>Try the kids’ pop-ups (answers are saved for the current explorer)</b><div class="test-row">${HEART_MOMENTS.map((m, i) => `<button class="button small secondary" data-tryhm="${i}">${i + 1}. ${m.kind === 'record' ? '🎤' : m.kind === 'pray' ? '🙏' : '✏️'} ${escapeHtml(m.prompt.split('?')[0].slice(0, 34))}…</button>`).join('')}</div><b style="display:block;margin-top:8px">Bonus questions (question 4 of the quiz)</b><div class="test-row">${Object.keys(REFLECT).map(c => `<button class="button small secondary" data-trybonus="${c}">Matthew ${c}</button>`).join('')}</div><div class="test-row"><button class="button small dark" id="tryWelcome">Replay new-day welcome 🔥</button><button class="button small dark" id="tryParents">See answers in parent dashboard →</button><button class="button small ghost" id="tryAge">Showing ages ${p && p.age <= 6 ? '4–6' : '7–12'} version — explorer age decides</button></div></div><div class="builder-section"><b>Reading</b><div class="test-row"><button id="testMap" class="button small secondary">Open any chapter</button><button id="testHomeQuiz" class="button small secondary">Try a home quiz</button></div></div>` : ''}<div class="builder-section"><b>Sky Run</b><p class="fineprint">Start Sky Run normally — test options (start at 2,000 for the UFO, unlimited hearts, Bible pages) appear on its start screen.</p></div><a class="button secondary wide" href="qa.html" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:block;margin-bottom:10px">Check all quiz questions (one page) →</a><button id="masterOff" class="button secondary wide">Turn off test mode</button>`);
   $('#modalCard').querySelectorAll('[data-stage]').forEach(b => b.onclick = () => { const v = Number(b.dataset.stage); testView.homeStage = v < 0 ? null : v; render(); showGrownUps(); });
   const setFlame = v => { testView.streak = v; $('#testFlameN').textContent = v == null ? 'real' : `${v} days`; render(); };
   $('#testFlame')?.addEventListener('input', e => setFlame(Number(e.target.value)));
@@ -616,6 +640,7 @@ function showGrownUps() {
   $('#testFlameReal')?.addEventListener('click', () => setFlame(null));
   $('#modalCard').querySelectorAll('[data-tryhm]').forEach(b => b.onclick = () => showHeartMoment(p, 1, () => { toast('Saved — see it in Parents → What they said'); showGrownUps(); }, HEART_MOMENTS[Number(b.dataset.tryhm)]));
   $('#modalCard').querySelectorAll('[data-trybonus]').forEach(b => b.onclick = () => { quiz = { mode: 'daily', chapter: Number(b.dataset.trybonus), score: 3, test: true, questions: [] }; showBonus(p, Number(b.dataset.trybonus), () => showGrownUps(), true); });
+  $('#tryWelcome')?.addEventListener('click', () => { closeModal(); p.lastWelcome = null; maybeWelcome(p); });
   $('#tryParents')?.addEventListener('click', () => showParentDashboard(p?.id));
   $('#testMap')?.addEventListener('click', showChapters);
   $('#testHomeQuiz')?.addEventListener('click', () => { const sorted = [...p.completed].sort((a, b) => a - b); const ch = sorted.length >= 3 ? sorted.slice(0, 3) : [1, 2, 3]; startQuiz({ mode: 'review', chapters: ch, test: true }); });

@@ -216,3 +216,30 @@ body.playing{overflow:hidden}
 .pd-tab{border:0;border-radius:9px;padding:10px 6px;font-weight:800;background:transparent;color:#7a5a3c;cursor:pointer}
 .pd-tab.active{background:#fff;color:#29464a;box-shadow:0 2px 6px #0001}
 .pd-pane .pd-journal,.pd-pane .pd-talk{margin-top:8px}
+
+/* New-day welcome */
+.day-welcome{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#5a2a1a 0%,#1f1410 70%);color:#fff8eb;text-align:center;--heat:0;transition:opacity .6s}
+.day-welcome.out{opacity:0}
+.dw-inner{display:grid;justify-items:center;gap:14px;padding:20px}
+.dw-hello{font:clamp(26px,6vw,44px)/1.1 FavorSans,'DM Sans',sans-serif;color:#ffd7a6}
+.dw-stage{display:flex;align-items:flex-end;gap:14px;min-height:240px}
+.dw-fire{position:relative;width:calc(110px + 90px * var(--heat));height:calc(140px + 110px * var(--heat));transition:width 1s cubic-bezier(.2,1.6,.4,1),height 1s cubic-bezier(.2,1.6,.4,1);animation:flicker .6s ease-in-out infinite alternate}
+.dw-fire i,.dw-fire b{position:absolute;left:50%;bottom:0;border-radius:50% 0 50% 50%;transform:translateX(-50%) rotate(-45deg)}
+.dw-fire i{width:78%;height:62%;bottom:6%;background:radial-gradient(circle at 60% 40%,#ffd35a,#ff6a1f 60%,#d0310f);box-shadow:0 0 calc(30px + 60px * var(--heat)) #ff7a2b}
+.dw-fire b{width:40%;height:32%;bottom:8%;background:radial-gradient(circle at 60% 40%,#fffbe0,#ffd23f 70%)}
+.dw-day{display:grid;justify-items:center;line-height:.85}
+.dw-day small{font:800 18px 'DM Sans',sans-serif;letter-spacing:4px;color:#ffb27a}
+.dw-day span{font:clamp(110px,24vw,190px)/0.85 Agharti,Impact,sans-serif;color:#ff8a3d;text-shadow:0 6px 0 #6b2a12,0 0 40px #ff6a1f88;display:inline-block}
+.dw-msg{font:700 clamp(18px,4.5vw,26px)/1.3 'DM Sans',sans-serif;color:#fff1de;min-height:2.6em}
+.dw-msg b{color:#ffd23f}
+.dw-go{font-size:20px;padding:16px 28px;animation:pulseBtn 1.2s ease-in-out infinite}
+@keyframes pulseBtn{50%{transform:scale(1.06)}}
+.day-welcome.shake .dw-stage{animation:dwShake .09s linear infinite}
+.day-welcome.shake .dw-day span{animation:dwBuild 2.2s ease-in forwards}
+@keyframes dwShake{0%{transform:translate(0,0)}25%{transform:translate(-5px,3px)}50%{transform:translate(4px,-3px)}75%{transform:translate(-3px,-4px)}100%{transform:translate(5px,2px)}}
+@keyframes dwBuild{to{transform:scale(1.25);color:#fff1a0;text-shadow:0 0 50px #fff}}
+.day-welcome.burst::after{content:"";position:absolute;inset:0;background:radial-gradient(circle,#fffbe0 0%,#ffd23f55 40%,transparent 70%);animation:dwFlash .9s ease-out forwards;pointer-events:none}
+@keyframes dwFlash{0%{opacity:1}100%{opacity:0}}
+.day-welcome.burst .dw-day span{animation:dwPop .7s cubic-bezier(.2,1.8,.4,1)}
+@keyframes dwPop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+.day-welcome.glow .dw-day span{color:#ffd23f}

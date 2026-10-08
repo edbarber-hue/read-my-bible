@@ -107,6 +107,19 @@ const SkyAudio = (() => {
     equip: (d, t) => { tone(d, 'sine', 660, t, 0.08, 0.18); tone(d, 'sine', 990, t + 0.06, 0.12, 0.18); },
     place: (d, t) => tone(d, 'sine', 240, t, 0.1, 0.25, 160),
     heart: (d, t) => [659, 880, 1109, 1319].forEach((f, i) => tone(d, 'sine', f, t + i * 0.06, 0.22, 0.25)),
+    rumble: (d, t) => { // low shaking rumble that builds for ~2.2s
+      const n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); n.buffer = (() => { const b = ac.createBuffer(1, ac.sampleRate * 2.4, ac.sampleRate), x = b.getChannelData(0); let v = 0; for (let i = 0; i < x.length; i++) { v = v * 0.98 + (Math.random() * 2 - 1) * 0.2; x[i] = v; } return b; })();
+      f.type = 'lowpass'; f.frequency.setValueAtTime(140, t); f.frequency.linearRampToValueAtTime(420, t + 2.2);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1.6, t + 2.0); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.35);
+      n.connect(f); f.connect(g); g.connect(d); n.start(t); n.stop(t + 2.4);
+      const o = ac.createOscillator(), og = ac.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(42, t); o.frequency.linearRampToValueAtTime(70, t + 2.2);
+      og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.5, t + 2.0); og.gain.exponentialRampToValueAtTime(0.0001, t + 2.3); o.connect(og); og.connect(d); o.start(t); o.stop(t + 2.4);
+    },
+    ignite: (d, t) => { // whoosh + burst + crackles
+      noise(d, t, 0.6, 0.6, 300); tone(d, 'sine', 90, t, 0.5, 0.6, 40); tone(d, 'triangle', 220, t, 0.8, 0.25, 880);
+      for (let i = 0; i < 14; i++) noise(d, t + 0.25 + Math.random() * 1.4, 0.03, 0.25 + Math.random() * 0.2, 2500 + Math.random() * 3000);
+      [784, 988, 1175, 1568].forEach((f, i) => tone(d, 'triangle', f, t + 0.35 + i * 0.09, 0.4, 0.16));
+    },
     bonus: (d, t) => [1319, 1568, 1976, 2637].forEach((f, i) => tone(d, 'sine', f, t + i * 0.07, 0.3, 0.16)),
   };
   return {
