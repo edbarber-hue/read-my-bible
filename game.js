@@ -1,5 +1,5 @@
 // Sky Run — original side-view runner. Hold to fly, release to fall.
-const canvas = $('#gameCanvas'), ctx = canvas.getContext('2d');
+const canvas = $('#gameCanvas'); let ctx = canvas.getContext('2d');   // ctx is swapped briefly to draw the HD card preview
 const W = 960, H = 540, PX = 200, MAX_HEARTS = 5;
 const FLIGHT_OUTFITS = ['coral-scout', 'sky-pilot', 'forest-ranger', 'royal-adventurer', 'sunset-surfer', 'golden-guardian', 'night-explorer', 'ocean-voyager'];
 let game = null, hold = false, frameId = 0, lastTime = 0;
@@ -452,7 +452,7 @@ function drawIdle() {
 // Small preview for the dashboard card.
 // Dashboard preview: a real Sky Run scene drawn with the game's own art, then copied into the card.
 function drawPlayPreview(p) {
-  const c = $('#playPreview'); if (!c) return; c.width = 480; c.height = 270; const x = c.getContext('2d');
+  const c = $('#playPreview'); if (!c) return; const S = 3, CX = 110, CY = 110, CW = 500, CH = 281; c.width = CW * S; c.height = CH * S; const x = c.getContext('2d');
   const scene = {
     t: 120, y: 250, vy: -2, hearts: 3, gems: 0, stars: 0, power: 0, throwT: 0, shine: 0, invuln: 0, hurt: 0, shake: 0,
     hazards: [{ kind: 'gear', x: 455, y: 320, r: 30, colors: COLORS_GEAR[2], phase: 1.2, bob: 0 }, { kind: 'zap', x: 560, y: 225, len: 120, angle: Math.PI / 2, spin: 0, phase: 0 }],
@@ -463,8 +463,9 @@ function drawPlayPreview(p) {
     if (game?.running) return;
     const saved = game; game = scene;
     for (let i = 0; i < 18; i++) scene.particles.push({ x: PX - 40 - i * 7, y: scene.y + 24 + (i % 3 - 1) * 5, vx: 0, vy: 0, life: 26 - i, color: equippedCosmetic(p, 'trail')?.colors[0] || '#ffd16a', kind: equippedCosmetic(p, 'trail')?.id || 'spark', size: 5 });
-    try { drawGame(); } finally { game = saved; scene.particles = []; }
-    x.clearRect(0, 0, 480, 270); x.drawImage(canvas, 110, 110, 500, 281, 0, 0, 480, 270);
+    const main = ctx; ctx = x;   // draw the scene straight into the card at 3× resolution (crisp on phones and retina screens)
+    x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height); x.setTransform(S, 0, 0, S, -CX * S, -CY * S); x.imageSmoothingQuality = 'high';
+    try { drawGame(); } finally { ctx = main; game = saved; scene.particles = []; x.setTransform(1, 0, 0, 1, 0, 0); }
     if (!saved) { drawIdle(); }
   };
   draw(); if (window.buildRunnerSheet) buildRunnerSheet(p).then(draw).catch(() => { });
