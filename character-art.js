@@ -152,9 +152,9 @@ function characterSheet(gender,item,hair=0,skinIndex=2,hairColorIndex=0,accId=''
 // Flying sprites with the explorer's own hairstyle (built offline) + runtime skin / hair colour from a mask.
 // Mask PNG: red = hair pixels, green = skin pixels.
 const runnerCache=new Map();
-function buildRunnerSheet(p){
+function buildRunnerSheet(p,suffix=''){
   const style=hairstylesFor(p.gender)[p.hair]||hairstylesFor(p.gender)[0];
-  const base=(window.CHARACTER_ROOT||'')+'turnarounds/flight/'+p.gender+'-'+style.id;
+  const base=(window.CHARACTER_ROOT||'')+'turnarounds/flight/'+p.gender+'-'+style.id+suffix;
   const hairColor=style.bald?0:(p.hairColor||0),skin=p.skin??2,key=[base,skin,hairColor].join('|');
   if(!runnerCache.has(key))runnerCache.set(key,Promise.all([loadCharacterImage(base+'.webp'),skin===2&&hairColor===0?null:loadCharacterImage(base+'-mask.webp')]).then(([im,mask])=>{
     im.padded=true;if(!mask)return im;

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Question Check · Read My Bible</title>
+<meta name="robots" content="noindex">
+<style>
+  :root{--ink:#29464a;--muted:#6e7775;--paper:#fff8eb;--cream:#fbe8ca;--coral:#c86354;--green:#59877d;--gold:#faa731;--line:#ecd4b7}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--cream);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif}
+  header{position:sticky;top:0;z-index:2;background:var(--coral);color:#fff;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  header h1{margin:0;font-size:19px}
+  header .tools{display:flex;gap:8px;flex-wrap:wrap}
+  header button,header select{border:0;border-radius:9px;padding:8px 12px;font:600 13px system-ui;background:var(--paper);color:var(--ink);cursor:pointer}
+  header button[aria-pressed=true]{background:var(--gold)}
+  main{max-width:1100px;margin:0 auto;padding:16px}
+  .intro{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:16px;color:var(--muted)}
+  section{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
+  section h2{margin:0 0 4px;font-size:20px}
+  .verse{background:var(--paper);border-left:4px solid var(--gold);padding:8px 12px;border-radius:8px;margin:8px 0 12px;font-size:14px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .box h3{margin:0 0 6px;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--coral)}
+  .box.review h3{color:var(--green)}
+  ol{margin:0;padding-left:20px}
+  li{margin:0 0 8px}
+  .q{font-weight:650}
+  .a{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px}
+  .a span{font-size:13px;padding:2px 8px;border-radius:99px;background:#f2ede4;color:var(--muted)}
+  .a span.ok{background:#dceee4;color:#24543f;font-weight:700}
+  .a span.ok:before{content:"✓ "}
+  .check{float:right;font-size:12px;color:var(--muted)}
+  .check input{vertical-align:-2px}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  @media print{header{position:static}.check{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Question check · Matthew 1–28</h1>
+  <div class="tools">
+    <button data-show="all" aria-pressed="true">All</button>
+    <button data-show="little" aria-pressed="false">Ages 4–6</button>
+    <button data-show="big" aria-pressed="false">Ages 7–12</button>
+    <select id="jump" aria-label="Jump to chapter"></select>
+  </div>
+</header>
+<main>
+  <div class="intro">Every question in the game, with the correct answer marked ✓. <b>Daily quiz</b> = the 3 questions after each day's reading. <b>Home quiz</b> = the extra question for that chapter used in the home-upgrade quiz. Ages 4–6 only read the one verse shown. Tick “Checked” as you go — ticks are saved in this browser only.</div>
+  <div id="list"></div>
+</main>
+<script src="net-matthew.js"></script>
+<script src="content.js"></script>
+<script src="review.js"></script>
+<script>
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let checked={};try{checked=JSON.parse(localStorage.getItem('rmb-qa-checked')||'{}')}catch{}
+const qItem=row=>`<li><div class="q">${esc(row[0])}</div><div class="a">${row.slice(1).map((a,i)=>`<span class="${i===0?'ok':''}">${esc(a)}</span>`).join('')}</div></li>`;
+document.getElementById('list').innerHTML=QUESTIONS.map((q,i)=>{const n=i+1,v=(window.NET_MATTHEW?.[n]||[]).find(x=>x[0]===q.verse);return `<section id="ch${n}">
+  <label class="check"><input type="checkbox" data-ch="${n}" ${checked[n]?'checked':''}> Checked</label>
+  <h2>Matthew ${n} · ${esc(q.title)}</h2>
+  <div class="grid">
+    <div class="box little"><h3>Ages 4–6 · daily quiz</h3><div class="verse"><b>Matthew ${n}:${q.verse}</b> ${v?esc(v[1]):''}</div><ol>${q.little.map(qItem).join('')}</ol></div>
+    <div class="box big"><h3>Ages 7–12 · daily quiz</h3><div class="verse">Reads the whole chapter.</div><ol>${q.big.map(qItem).join('')}</ol></div>
+    <div class="box review little"><h3>Ages 4–6 · home quiz</h3><ol>${qItem(REVIEW[i].little)}</ol></div>
+    <div class="box review big"><h3>Ages 7–12 · home quiz</h3><ol>${qItem(REVIEW[i].big)}</ol></div>
+  </div></section>`}).join('');
+document.querySelectorAll('[data-ch]').forEach(c=>c.onchange=()=>{checked[c.dataset.ch]=c.checked;try{localStorage.setItem('rmb-qa-checked',JSON.stringify(checked))}catch{}});
+const jump=document.getElementById('jump');jump.innerHTML='<option value="">Jump to…</option>'+QUESTIONS.map((q,i)=>`<option value="${i+1}">Matthew ${i+1}</option>`).join('');
+jump.onchange=()=>{if(jump.value)document.getElementById('ch'+jump.value).scrollIntoView({behavior:'smooth'})};
+document.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-show]').forEach(x=>x.setAttribute('aria-pressed',x===b));const m=b.dataset.show;document.querySelectorAll('.box').forEach(x=>x.style.display=m==='all'||x.classList.contains(m)?'':'none')});
+</script>
+</body>
+</html>

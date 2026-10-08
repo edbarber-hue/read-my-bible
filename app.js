@@ -380,27 +380,26 @@ function finishHomeQuiz(p) {
   $('#homeDone').onclick = () => { closeModal(); $('#homeBase').scrollIntoView({ behavior: 'smooth' }); };
 }
 // Furniture. Each choice unlocks with the home stage (index 0 = tent, 3 = mansion).
+// Furniture: one clean cut-out image per choice (decor/<file>-<n>.webp). Each choice unlocks with the home stage.
 const DECOR = {
-  couch: { label: 'Sofa', sheet: 'home', row: 2, names: ['Teal sofa', 'Coral sofa', 'Golden sofa', 'Sage sofa'], pos: { x: 24, y: 78 } },
-  tv: { label: 'TV', sheet: 'home', row: 3, names: ['Wooden TV', 'Teal TV', 'Big screen', 'Cream TV'], pos: { x: 77, y: 72 } },
-  bible: { label: 'Bible', sheet: 'bible', names: ['First Bible', 'Explorer Bible', 'Adventure Bible', 'Treasure Bible'], pos: { x: 56, y: 80 } },
-  plate: { label: 'Plate', sheet: 'home', row: 1, names: ['Teal plate', 'Coral plate', 'Flower plate', 'Sage dish'], pos: { x: 42, y: 86 } },
-  food: { label: 'Snack', sheet: 'home', row: 0, names: ['Apple', 'Grapes', 'Bread', 'Cheese'], pos: { x: 42, y: 83 } }
+  rug: { label: 'Carpet', files: ['rug-0', 'rug-1', 'rug-2', 'rug-3'], names: ['Woven mat', 'Braided rug', 'Pattern rug', 'Royal rug'], pos: { x: 50, y: 96 }, flat: true },
+  couch: { label: 'Sofa', files: ['home-8', 'home-9', 'home-10', 'home-11'], names: ['Teal sofa', 'Coral sofa', 'Golden sofa', 'Sage sofa'], pos: { x: 24, y: 78 } },
+  tv: { label: 'TV', files: ['home-12', 'home-13', 'home-14', 'home-15'], names: ['Wooden TV', 'Teal TV', 'Big screen', 'Cream TV'], pos: { x: 77, y: 72 } },
+  bible: { label: 'Bible', files: ['bible-0', 'bible-1', 'bible-2', 'bible-3'], names: ['First Bible', 'Explorer Bible', 'Adventure Bible', 'Treasure Bible'], pos: { x: 56, y: 80 } },
+  plate: { label: 'Plate', files: ['home-4', 'home-5', 'home-6', 'home-7'], names: ['Teal plate', 'Coral plate', 'Flower plate', 'Sage dish'], pos: { x: 42, y: 86 } },
+  food: { label: 'Snack', files: ['home-0', 'home-1', 'home-2', 'home-3'], names: ['Apple', 'Grapes', 'Bread', 'Cheese'], pos: { x: 42, y: 83 } }
 };
 const OUTDOOR = {
-  garden: { label: 'Garden', row: 0, names: ['Flower bed', 'Leafy planter', 'Veggie garden'], pos: { x: 17, y: 78 } },
-  welcome: { label: 'Porch details', row: 1, names: ['Welcome sign', 'Garden lantern', 'Stepping stones'], pos: { x: 68, y: 74 } },
-  seating: { label: 'Outdoor seating', row: 2, names: ['Teal bench', 'Coral rocker', 'Sunny hammock'], pos: { x: 86, y: 82 } }
+  garden: { label: 'Garden', files: ['outdoor-0', 'outdoor-1', 'outdoor-2'], names: ['Flower bed', 'Leafy planter', 'Veggie garden'], pos: { x: 17, y: 78 } },
+  welcome: { label: 'Porch details', files: ['outdoor-3', 'outdoor-4', 'outdoor-5'], names: ['Welcome sign', 'Garden lantern', 'Stepping stones'], pos: { x: 68, y: 74 } },
+  seating: { label: 'Outdoor seating', files: ['outdoor-6', 'outdoor-7', 'outdoor-8'], names: ['Teal bench', 'Coral rocker', 'Sunny hammock'], pos: { x: 86, y: 82 } }
 };
-// Cars arrive with each home upgrade (art: cars.png, 3 across). Empty until the art is added.
-const CARS = window.HOME_CARS || [];
-function decorArt(type, index, extra = '') {
-  const d = DECOR[type];
-  if (d.sheet === 'bible') return `<span class="decor-sprite bible-sprite ${extra}" style="--sx:${index % 2 * 100}%;--sy:${Math.floor(index / 2) * 100}%" aria-hidden="true"></span>`;
-  return `<span class="decor-sprite ${extra}" style="--sx:${index * 100 / 3}%;--sy:${d.row * 100 / 3}%" aria-hidden="true"></span>`;
-}
-const outdoorArt = (type, index, extra = '') => `<span class="outdoor-decor-sprite ${extra}" style="--sx:${index * 50}%;--sy:${OUTDOOR[type].row * 50}%" aria-hidden="true"></span>`;
-const carArt = (index, extra = '') => `<span class="car-sprite ${extra}" style="--sx:${index * 50}%" aria-hidden="true"></span>`;
+// A new car arrives with each home upgrade: trailer → pickup, house → station wagon, mansion → convertible.
+const CARS = ['Pickup truck', 'Station wagon', 'Convertible'];
+const art = (file, extra = '') => `<span class="decor-art ${extra}" style="background-image:url('decor/${file}.webp')" aria-hidden="true"></span>`;
+const decorArt = (type, index, extra = '') => art(DECOR[type].files[index], extra);
+const outdoorArt = (type, index, extra = '') => art(OUTDOOR[type].files[index], extra);
+const carArt = (index, extra = '') => art('car-' + index, extra);
 const decorUnlocked = (p, i) => isMaster() || i <= homeStage(p);
 function renderHome(p) {
   const stage = homeStage(p), inside = !!p.homeInside, progress = homeProgress(p);
@@ -417,7 +416,7 @@ function renderHome(p) {
   const items = inside ? DECOR : OUTDOOR, chosen = inside ? p.decor : p.outdoorDecor, positions = (inside ? p.decorPositions : p.outdoorPositions) || {};
   let html = Object.keys(items).map(k => {
     const idx = Math.min(chosen[k] || 0, items[k].names.length - 1), pos = positions[k] || items[k].pos;
-    return `<span class="placed-decor decor-${k} ${inside ? '' : 'outdoor-item'}" data-item="${k}" data-kind="${inside ? 'interior' : 'exterior'}" role="button" tabindex="0" aria-label="Drag to move ${items[k].names[idx]}" style="left:${pos.x}%;top:${pos.y}%;z-index:${Math.round(pos.y)}">${inside ? decorArt(k, idx) : outdoorArt(k, idx)}</span>`;
+    return `<span class="placed-decor decor-${k} ${inside ? '' : 'outdoor-item'}" data-item="${k}" data-kind="${inside ? 'interior' : 'exterior'}" role="button" tabindex="0" aria-label="Drag to move ${items[k].names[idx]}" style="left:${pos.x}%;top:${pos.y}%;z-index:${items[k].flat ? 1 : Math.round(pos.y)}">${inside ? decorArt(k, idx) : outdoorArt(k, idx)}</span>`;
   }).join('');
   if (!inside && CARS.length && stage > 0) {
     const car = Math.min(p.carChoice ?? stage - 1, stage - 1), pos = positions.car || { x: 82, y: 66 };
@@ -478,7 +477,7 @@ function showGrownUps() {
     return;
   }
   const p = profile();
-  openModal(`${header('TEST MODE', 'Grown-up tools')}<p>Test mode is on for this device. Every look, decoration, and Sky Run is unlocked, and quizzes can be skipped. Skipping a quiz <b>does</b> mark the chapter as read for the current explorer, so use a test explorer for that.</p>${p ? `<div class="builder-section"><b>Preview home stage (not saved)</b><div class="test-row">${HOME_NAMES.map((n, i) => `<button class="button small ${homeStage(p) === i ? 'dark' : 'secondary'}" data-stage="${i}">${n}</button>`).join('')}<button class="button small ghost" data-stage="-1">Real</button></div></div><div class="builder-section"><b>Reading</b><div class="test-row"><button id="testMap" class="button small secondary">Open any chapter</button><button id="testHomeQuiz" class="button small secondary">Try a home quiz</button></div></div>` : ''}<div class="builder-section"><b>Sky Run</b><p class="fineprint">Start Sky Run normally — test options (start at 2,000 for the UFO, unlimited hearts, Bible pages) appear on its start screen.</p></div><a class="text-button" href="turnarounds/gallery.html">Character art gallery →</a><button id="masterOff" class="button secondary wide">Turn off test mode</button>`);
+  openModal(`${header('TEST MODE', 'Grown-up tools')}<p>Test mode is on for this device. Every look, decoration, and Sky Run is unlocked, and quizzes can be skipped. Skipping a quiz <b>does</b> mark the chapter as read for the current explorer, so use a test explorer for that.</p>${p ? `<div class="builder-section"><b>Preview home stage (not saved)</b><div class="test-row">${HOME_NAMES.map((n, i) => `<button class="button small ${homeStage(p) === i ? 'dark' : 'secondary'}" data-stage="${i}">${n}</button>`).join('')}<button class="button small ghost" data-stage="-1">Real</button></div></div><div class="builder-section"><b>Reading</b><div class="test-row"><button id="testMap" class="button small secondary">Open any chapter</button><button id="testHomeQuiz" class="button small secondary">Try a home quiz</button></div></div>` : ''}<div class="builder-section"><b>Sky Run</b><p class="fineprint">Start Sky Run normally — test options (start at 2,000 for the UFO, unlimited hearts, Bible pages) appear on its start screen.</p></div><a class="button secondary wide" href="qa.html" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:block;margin-bottom:10px">Check all quiz questions (one page) →</a><button id="masterOff" class="button secondary wide">Turn off test mode</button>`);
   $('#modalCard').querySelectorAll('[data-stage]').forEach(b => b.onclick = () => { const v = Number(b.dataset.stage); testView.homeStage = v < 0 ? null : v; render(); showGrownUps(); });
   $('#testMap')?.addEventListener('click', showChapters);
   $('#testHomeQuiz')?.addEventListener('click', () => { const sorted = [...p.completed].sort((a, b) => a - b); const ch = sorted.length >= 3 ? sorted.slice(0, 3) : [1, 2, 3]; startQuiz({ mode: 'review', chapters: ch, test: true }); });
@@ -504,8 +503,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal
   scene.addEventListener('pointerdown', e => { const piece = e.target.closest('[data-item]'); if (!piece) return; drag = piece; scene.setPointerCapture(e.pointerId); e.preventDefault(); });
   scene.addEventListener('pointermove', e => {
     if (!drag) return; const box = scene.getBoundingClientRect();
-    const x = Math.max(4, Math.min(96, (e.clientX - box.left) / box.width * 100)), y = Math.max(58, Math.min(92, (e.clientY - box.top) / box.height * 100));
-    drag.style.left = `${x}%`; drag.style.top = `${y}%`; drag.style.zIndex = Math.round(y);
+    const x = Math.max(4, Math.min(96, (e.clientX - box.left) / box.width * 100)), y = Math.max(58, Math.min(drag.dataset.item === 'rug' ? 99 : 92, (e.clientY - box.top) / box.height * 100));
+    drag.style.left = `${x}%`; drag.style.top = `${y}%`; if (drag.dataset.item !== 'rug') drag.style.zIndex = Math.round(y);
   });
   const end = () => {
     if (!drag) return; const p = profile(), key = drag.dataset.kind === 'exterior' ? 'outdoorPositions' : 'decorPositions';

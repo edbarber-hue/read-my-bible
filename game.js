@@ -8,7 +8,14 @@ const testOpts = { invincible: false, startAt2000: false, startPower: false };
 // ---------- Art ----------
 function loadImg(src) { const im = new Image(); im.src = src; return im; }
 const sheets = { boy: loadImg('turnarounds/boy-flight-outfits.webp'), girl: loadImg('turnarounds/girl-flight-outfits.webp') };
-const throwSheets = { boy: [loadImg('turnarounds/boy-throw-a.webp'), loadImg('turnarounds/boy-throw-b.webp')], girl: [loadImg('turnarounds/girl-throw-a.webp'), loadImg('turnarounds/girl-throw-b.webp')] };
+// Throwing poses (with the explorer's own hairstyle). Release frames are drawn a little bigger so the head matches the flying frame.
+const POSE = { boy: { flight: [460, 222.5], release: { s: 1.197, eye: [370, 238.5] } }, girl: { flight: [471, 217], release: { s: 1.095, eye: [366, 263.5] } } };
+let throwArt = { key: null, windup: null, release: null };
+function throwSheet(p, pose) {
+  const key = [p.gender, p.hair, p.hairColor, p.skin].join('|');
+  if (throwArt.key !== key && window.buildRunnerSheet) { throwArt = { key, windup: null, release: null }; for (const ps of ['windup', 'release']) buildRunnerSheet(p, '-throw-' + ps).then(c => { if (throwArt.key === key) throwArt[ps] = c; }).catch(() => { }); }
+  return throwArt[pose];
+}
 const ready = im => im && im.complete && im.naturalWidth > 0;
 const cosmeticSprites = new Map(COSMETICS.map(item => [item.id, loadImg(cosmeticDataUrl(item))]));
 // Real accessory art cut from the turnaround sheets, placed on the flying head.
@@ -56,6 +63,7 @@ function startRun() {
     shake: 0, dying: 0, missionDone: false, little: p.age <= 6, invincible: master && testOpts.invincible
   };
   $('#gameOverlay').classList.add('hidden');
+  throwSheet(p, 'windup');
   updateHud();
   $('#missionText').textContent = 'Mission: collect 10 gems';
   lastTime = performance.now();
@@ -159,6 +167,7 @@ function step(dt) {
     if (g.power <= 0) popup('Pages all thrown!', PX, py - 70);
   }
   for (const s of g.shots) {
+    if (s.delay > 0) { s.delay -= dt; s.x = PX + 62; s.y = g.y - 10; continue; }
     s.x += s.vx * dt; s.y += s.vy * dt; s.rot += .25 * dt;
     for (const o of g.hazards) {
       if (o.dead || s.hit) continue;
@@ -193,7 +202,7 @@ function throwPage() {
   if (g.ufo && !g.ufo.leaving) { tx = g.ufo.x; ty = g.ufo.y; }
   else { const ahead = g.hazards.filter(o => !o.dead && o.x > PX + 40 && o.x < 900).sort((a, b) => a.x - b.x)[0]; if (ahead) { tx = ahead.x; ty = ahead.kind === 'gear' ? ahead.y + Math.sin(ahead.phase) * ahead.bob : ahead.y; } }
   const d = Math.hypot(tx - sx, ty - sy) || 1;
-  g.shots.push({ x: sx, y: sy, vx: (tx - sx) / d * 14, vy: (ty - sy) / d * 14, rot: 0 });
+  g.shots.push({ x: sx, y: sy, vx: (tx - sx) / d * 14, vy: (ty - sy) / d * 14, rot: 0, delay: 8 });
   g.throwT = 16;
 }
 function spawnUfo() {
@@ -377,16 +386,19 @@ function drawPlayer(p, y, t, g = game) {
   const jet = equippedCosmetic(p, 'jetpack'), acc = equippedCosmetic(p, 'accessory');
   if (jet && jet.id !== 'classic-pack') drawCosmetic(jet, jet.id === 'butterfly-wings' ? -57 : -49, -36, jet.id === 'butterfly-wings' ? 65 : 40, jet.id === 'butterfly-wings' ? 58 : 55);
   const outfit = equippedCosmetic(p, 'outfit')?.id || 'coral-scout', idx = Math.max(0, FLIGHT_OUTFITS.indexOf(outfit));
-  const throwing = g?.throwT > 0 && ready(throwSheets[p.gender][0]) && ready(throwSheets[p.gender][1]);
-  const src = throwing ? throwSheets[p.gender][g.throwT > 8 ? 0 : 1] : sheet;
+  const pose = g?.throwT > 0 ? (g.throwT > 8 ? 'windup' : 'release') : null, tsrc = pose && throwSheet(p, pose);
+  const src = tsrc || sheet;
   const sw = (src.naturalWidth || src.width) / 4, sh = (src.naturalHeight || src.height) / 2, sx = idx % 4 * sw, sy = Math.floor(idx / 4) * sh;
   const size = src.padded ? 180 : 124;
+  // map the release pose so its head lands where the flying head is
+  let dx0 = -size / 2, dy0 = -size / 2, dsz = size;
+  if (tsrc && pose === 'release') { const P = POSE[p.gender], k = size / 644; dsz = size * P.release.s; dx0 = -size / 2 + (P.flight[0] - P.release.eye[0] * P.release.s) * k; dy0 = -size / 2 + (P.flight[1] - P.release.eye[1] * P.release.s) * k; }
   if ((src.naturalWidth || src.width) > 0) {
     if (g?.hurt > 0 && Math.floor(g.hurt / 4) % 2 === 0) {
       tctx.clearRect(0, 0, 240, 240); tctx.globalCompositeOperation = 'source-over'; tctx.drawImage(src, sx, sy, sw, sh, 0, 0, 240, 240);
       tctx.globalCompositeOperation = 'source-atop'; tctx.fillStyle = 'rgba(255,40,50,.62)'; tctx.fillRect(0, 0, 240, 240);
-      ctx.drawImage(tint, -size / 2, -size / 2, size, size);
-    } else ctx.drawImage(src, sx, sy, sw, sh, -size / 2, -size / 2, size, size);
+      ctx.drawImage(tint, dx0, dy0, dsz, dsz);
+    } else ctx.drawImage(src, sx, sy, sw, sh, dx0, dy0, dsz, dsz);
   }
   const accIm = acc && accSprite(p.gender, acc.id), meta = window.FLIGHT_ACC;
   if (accIm && ready(accIm) && meta) {
@@ -414,7 +426,7 @@ function drawGame() {
   g.lasers.forEach(drawLaser);
   g.particles.forEach(drawParticle);
   drawPlayer(p, g.y, t);
-  g.shots.forEach(drawShot);
+  g.shots.forEach(s => { if (!(s.delay > 0)) drawShot(s); });
   for (const r of g.rings) { ctx.save(); ctx.globalAlpha = Math.max(0, r.life / 22); ctx.strokeStyle = r.color; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
   for (const o of g.popups) { ctx.save(); ctx.globalAlpha = Math.min(1, o.life / 25); ctx.font = 'bold 22px FavorSans, sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#29464a'; ctx.strokeText(o.text, o.x, o.y); ctx.fillStyle = o.color; ctx.fillText(o.text, o.x, o.y); ctx.restore(); }
   ctx.restore();
