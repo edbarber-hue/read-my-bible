@@ -401,7 +401,7 @@ function showHeartMoment(p, ch, done) {
       ? `<label class="field">${escapeHtml(m.prompt)}<input id="hmA" maxlength="60" placeholder="Their name"></label><label class="field">${escapeHtml(m.prompt2)}<textarea id="hmB" rows="2" maxlength="200" placeholder="I pray that…"></textarea></label>`
       : `<label class="field">Your answer<${m.kind === 'type' ? `input id="hmA" maxlength="80" placeholder="${escapeHtml(m.placeholder || '')}"` : 'textarea id="hmA" rows="3" maxlength="300"'}>${m.kind === 'type' ? '' : '</textarea>'}</label>`;
     const recUI = `<div class="rec-box"><button id="hmRec" class="rec-button" aria-label="Record">🎤</button><div id="hmRecText" class="rec-text">${clip ? 'Recorded! Listen, then save it.' : 'Tap the microphone and talk. Tap again to stop.'}</div>${clip ? `<audio id="hmPlay" controls src="${URL.createObjectURL(clip)}"></audio>` : ''}</div>`;
-    openModal(`${header(m.title === 'PRAY BREAK!' ? '🙏 PRAY BREAK!' : '💛 HEART MOMENT', escapeHtml(m.title))}<p class="hm-prompt">${escapeHtml(m.kind === 'pray' && mode === 'record' ? 'Who do you want to pray for? Say their name and what you want to pray for them.' : m.prompt)}</p>
+    openModal(`${header(m.title === 'PRAY BREAK!' ? '🙏 PRAY BREAK!' : '💛 HEART MOMENT', m.title === 'PRAY BREAK!' ? 'Time to pray' : escapeHtml(m.title))}<p class="hm-prompt">${escapeHtml(m.kind === 'pray' ? (mode === 'record' ? 'Who do you want to pray for? Say their name and what you want to pray for them.' : 'Think of someone who needs prayer today.') : m.prompt)}</p>
       ${mode === 'record' ? recUI : typeUI}
       ${m.kind !== 'record' || mode === 'record' ? '' : ''}
       <p class="fineprint">Your ${mode === 'record' ? 'message' : 'answer'} is saved for your parents to see on this device.</p>
