@@ -51,7 +51,7 @@ function showStartCard() {
   $('#gameOverlay').querySelectorAll('[data-opt]').forEach(c => c.onchange = () => testOpts[c.dataset.opt] = c.checked);
   $('#startRunButton').onclick = startRun;
 }
-function closeGame() { if (game) game.running = false; cancelAnimationFrame(frameId); hold = false; $('#gameLayer').classList.add('hidden'); document.body.classList.remove('playing'); render(); }
+function closeGame() { SkyAudio.stop(); if (game) game.running = false; cancelAnimationFrame(frameId); hold = false; $('#gameLayer').classList.add('hidden'); document.body.classList.remove('playing'); render(); }
 
 // ---------- Run ----------
 function startRun() {
@@ -66,11 +66,13 @@ function startRun() {
   throwSheet(p, 'windup');
   updateHud();
   $('#missionText').textContent = 'Mission: collect 10 gems';
+  SkyAudio.start();
   lastTime = performance.now();
   cancelAnimationFrame(frameId);
   frameId = requestAnimationFrame(loop);
 }
 function endRun() {
+  SkyAudio.stop(); SkyAudio.sfx('over');
   const p = profile(); game.running = false; cancelAnimationFrame(frameId); hold = false;
   const points = Math.floor(game.score);
   const best = points > (p.best || 0);
@@ -91,7 +93,7 @@ function damage(src, x, y) {
   ring(x, y, '#ff5a4f', 70); burst(x, y, '#ffd166', 14, 5); burst(x, y, '#ff5a4f', 10, 3);
   if (src) src.hitT = 26;
   if (game.invincible) { game.invuln = 60; popup('Test: no damage', PX, game.y - 70); return; }
-  game.hearts--; game.heartFx.push({ i: game.hearts, t: 0 });
+  SkyAudio.sfx('hit'); game.hearts--; game.heartFx.push({ i: game.hearts, t: 0 });
   game.hurt = 60; game.invuln = 105; game.shake = 16; game.vy = -2.5;
   popup(game.hearts > 0 ? 'Ouch!' : 'Oh no!', PX, game.y - 72, '#ffd7d2');
   if (game.hearts <= 0) { game.dying = 80; hold = false; }
@@ -149,11 +151,11 @@ function step(dt) {
   // Player hit circle
   const py = g.y - 4, pr = 24;
   // Gems
-  for (const o of g.gemList) if (!o.hit && Math.hypot(o.x - PX, o.y - py) < 34) { o.hit = true; g.gems++; g.score += 10; burst(o.x, o.y, '#9ff3ff', 8, 3); if (g.gems >= 10 && !g.missionDone) { g.missionDone = true; $('#missionText').textContent = 'Mission complete! Keep collecting gems'; popup('Mission complete!', PX + 80, py - 60, '#fff3a6'); } }
+  for (const o of g.gemList) if (!o.hit && Math.hypot(o.x - PX, o.y - py) < 34) { o.hit = true; g.gems++; SkyAudio.sfx('gem'); g.score += 10; burst(o.x, o.y, '#9ff3ff', 8, 3); if (g.gems >= 10 && !g.missionDone) { g.missionDone = true; $('#missionText').textContent = 'Mission complete! Keep collecting gems'; popup('Mission complete!', PX + 80, py - 60, '#fff3a6'); } }
   // Stars: shine + protection
-  for (const o of g.starList) if (!o.hit && Math.hypot(o.x - PX, o.y - py) < 36) { o.hit = true; g.stars++; g.score += 40; g.shine = 150; g.invuln = Math.max(g.invuln, 120); burst(o.x, o.y, '#ffe473', 26, 5); ring(o.x, o.y, '#fff3a6', 80); popup('Shine!', o.x, o.y - 26, '#fff3a6'); }
+  for (const o of g.starList) if (!o.hit && Math.hypot(o.x - PX, o.y - py) < 36) { o.hit = true; g.stars++; SkyAudio.sfx('star'); g.score += 40; g.shine = 150; g.invuln = Math.max(g.invuln, 120); burst(o.x, o.y, '#ffe473', 26, 5); ring(o.x, o.y, '#fff3a6', 80); popup('Shine!', o.x, o.y - 26, '#fff3a6'); }
   // Power-up: Bible pages
-  for (const o of g.powerups) if (!o.hit && Math.hypot(o.x - PX, o.y + Math.sin(o.phase) * 6 - py) < 42) { o.hit = true; g.power = 420; g.throwCd = 6; burst(o.x, o.y, '#fff1b0', 24, 5); ring(o.x, o.y, '#ffd45b', 90); popup('Bible pages!', o.x, o.y - 34, '#fff3a6'); }
+  for (const o of g.powerups) if (!o.hit && Math.hypot(o.x - PX, o.y + Math.sin(o.phase) * 6 - py) < 42) { o.hit = true; g.power = 420; SkyAudio.sfx('power'); g.throwCd = 6; burst(o.x, o.y, '#fff1b0', 24, 5); ring(o.x, o.y, '#ffd45b', 90); popup('Bible pages!', o.x, o.y - 34, '#fff3a6'); }
   // Hazards
   for (const o of g.hazards) {
     if (o.dead) continue;
@@ -194,7 +196,7 @@ function step(dt) {
   $('#powerText').textContent = g.power > 0 ? `Throwing Bible pages! ${Math.ceil(g.power / 60)}s` : g.ufo ? 'UFO! Grab a glowing Bible to fight back!' : 'Grab a glowing Bible to throw pages!';
 }
 function smash(o, x, y, byPage = false) {
-  o.dead = true; o.deadT = 0; burst(x, y, byPage ? '#fff3a6' : '#ffe473', 18, 5); ring(x, y, '#fff3a6', 70);
+  o.dead = true; o.deadT = 0; SkyAudio.sfx('smash'); burst(x, y, byPage ? '#fff3a6' : '#ffe473', 18, 5); ring(x, y, '#fff3a6', 70);
   game.score += 25; popup('+25', x, y - 20, '#fff3a6');
 }
 function throwPage() {
@@ -203,11 +205,11 @@ function throwPage() {
   else { const ahead = g.hazards.filter(o => !o.dead && o.x > PX + 40 && o.x < 900).sort((a, b) => a.x - b.x)[0]; if (ahead) { tx = ahead.x; ty = ahead.kind === 'gear' ? ahead.y + Math.sin(ahead.phase) * ahead.bob : ahead.y; } }
   const d = Math.hypot(tx - sx, ty - sy) || 1;
   g.shots.push({ x: sx, y: sy, vx: (tx - sx) / d * 14, vy: (ty - sy) / d * 14, rot: 0, delay: 8 });
-  g.throwT = 16;
+  g.throwT = 16; SkyAudio.sfx('throw');
 }
 function spawnUfo() {
   game.ufo = { x: 1080, y: 150, tx: 790, hp: game.little ? 4 : 6, max: game.little ? 4 : 6, fire: 110, life: 1600, phase: 0, flash: 0, leaving: false };
-  popup('UFO incoming!', 640, 120, '#c8ffd4');
+  popup('UFO incoming!', 640, 120, '#c8ffd4'); SkyAudio.sfx('ufo');
   game.nextPowerT = Math.min(game.nextPowerT, game.t + 90);
 }
 function stepUfo(dt, py, pr) {
@@ -218,7 +220,7 @@ function stepUfo(dt, py, pr) {
   if (u.leaving) { if (u.x > 1100) { game.ufo = null; game.nextUfo = game.score + 1200; } return; }
   if (u.x < 860 && (u.fire -= dt) <= 0) {
     const sx = u.x - 30, sy = u.y + 22, d = Math.hypot(PX - sx, py - sy) || 1, v = game.little ? 5 : 6.5;
-    game.lasers.push({ x: sx, y: sy, vx: (PX - sx) / d * v, vy: (py - sy) / d * v });
+    SkyAudio.sfx('laser'); game.lasers.push({ x: sx, y: sy, vx: (PX - sx) / d * v, vy: (py - sy) / d * v });
     u.fire = Math.max(70, (game.little ? 160 : 115) - (game.score - 2000) / 60);
   }
 }
@@ -466,4 +468,6 @@ $('#gameLayer').addEventListener('selectstart', e => e.preventDefault());
 window.addEventListener('keydown', e => { if (e.code === 'Space' && !$('#gameLayer').classList.contains('hidden')) { if (game?.running) hold = true; e.preventDefault(); } });
 window.addEventListener('keyup', e => { if (e.code === 'Space') hold = false; });
 $('#closeGameButton').onclick = closeGame;
+const muteBtn = $('#muteButton'), paintMute = () => { muteBtn.textContent = SkyAudio.muted ? '🔇' : '♪'; muteBtn.classList.toggle('off', SkyAudio.muted); };
+muteBtn.onclick = () => { SkyAudio.toggleMute(); paintMute(); }; paintMute();
 render();
