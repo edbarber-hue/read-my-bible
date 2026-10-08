@@ -308,3 +308,4 @@ body.playing{overflow:hidden}
 .sw-day.future b{opacity:.55}
 .sw-day.today b{color:#29464a}
 .sw-day em{font-style:normal;font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#fff;background:#29464a;border-radius:99px;padding:1px 7px;margin-top:-2px}
+.hero-art .floating-island{display:none}

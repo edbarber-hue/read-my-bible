@@ -122,14 +122,17 @@ const header = (kicker, title) => `<div class="modal-head"><div><div class="eyeb
 function toast(msg) { const n = document.createElement('div'); n.className = 'toast'; n.textContent = msg; document.body.append(n); setTimeout(() => n.remove(), 2800); }
 
 // ---------- Dashboard ----------
+// ?new shows the first-time landing page (what a new kid sees), even on a device that already has an explorer.
+let freshLanding = /[?&]new\b/.test(location.search);
+function leaveFreshLanding() { if (!freshLanding) return; freshLanding = false; history.replaceState(null, '', location.pathname); }
 function render() {
-  const p = profile();
+  const p = freshLanding ? null : profile();
   ['#dashboard', '#homeBase', '#readRow', '#playRow', '#outfitSection'].forEach(s => $(s).classList.toggle('hidden', !p));
   $('#hero').classList.toggle('hidden', !!p);
   $('#testBadge').classList.toggle('hidden', !isMaster());
   const unseen = state.profiles.reduce((n, k) => n + Math.max(0, (k.journal || []).length - (k.journalSeen || 0)), 0); $('#parentsButton').dataset.badge = unseen ? unseen : ''; 
   $('#activeProfileLabel').textContent = p ? `${p.name} · age ${p.age}` : 'No explorer selected';
-  $('#primaryButton').textContent = p ? 'Continue adventure' : 'Choose an explorer';
+  $('#primaryButton').textContent = p ? 'Continue adventure' : 'Start my adventure';
   if (!p) return;
   const n = todayChapter(p), little = p.age <= 6, q = QUESTIONS[n - 1], done = passedToday(p) && !catchUpOpen(p);
   $('#welcomeTitle').textContent = `Ready, ${firstName(p)}?`;
@@ -269,10 +272,10 @@ function showProfiles() {
     if (state.profiles.some(p => `${p.name} ${p.lastName || ''}`.trim().toLowerCase() === `${d.firstName} ${d.lastName}`.toLowerCase())) { toast('That explorer is already on this device'); return; }
     const p = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), name, age, gender, startDate: todayKey(), completed: [], dailyPass: {}, homeStage: 0, skin: 2, hair: 0, hairColor: 0, decor: {}, outdoorDecor: {}, cosmetics: { accessory: null, trail: null, jetpack: null, outfit: null }, best: 0, totalStars: 0, congratsShown: false, v2: 1 };
     applyDetails(p, d); p.lastWelcome = null;
-    state.profiles.push(p); currentId = state.currentId = p.id; save(); Sync.event(p, 'Signed up'); closeModal(); render(); toast(`Welcome, ${name}!`);
+    state.profiles.push(p); currentId = state.currentId = p.id; leaveFreshLanding(); save(); Sync.event(p, 'Signed up'); closeModal(); render(); toast(`Welcome, ${name}!`);
   };
   $('#transferButton').onclick = showTransfer;
-  $('#modalCard').querySelectorAll('[data-select]').forEach(b => b.onclick = () => { currentId = state.currentId = b.dataset.select; save(); closeModal(); render(); });
+  $('#modalCard').querySelectorAll('[data-select]').forEach(b => b.onclick = () => { currentId = state.currentId = b.dataset.select; leaveFreshLanding(); save(); closeModal(); render(); });
 }
 function showTransfer() {
   const p = profile(); let code = '';
@@ -732,7 +735,7 @@ document.addEventListener('pointerdown', e => {
   if (e.target.closest('.button, .text-button, .wardrobe-tab, .cosmetic-card, .decor-choice, .hairstyle-choice, .builder-choice, .chapter-tile')) SkyAudio.sfx('tap');
 }, true);
 $('#profileButton').onclick = showProfiles;
-$('#primaryButton').onclick = () => profile() ? $('#dashboard').scrollIntoView({ behavior: 'smooth' }) : showProfiles();
+$('#primaryButton').onclick = () => !freshLanding && profile() ? $('#dashboard').scrollIntoView({ behavior: 'smooth' }) : showProfiles();
 $('#howButton').onclick = showHow;
 $('#readTodayButton').onclick = () => { const p = profile(); if (p) showReading(todayChapter(p)); };
 $('#mapButton').onclick = showChapters;
