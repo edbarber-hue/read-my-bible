@@ -294,3 +294,17 @@ body.playing{overflow:hidden}
   .play-row .custom-card .character-preview{flex:none;height:170px}.play-row .custom-card .character-preview .explorer-figure{height:160px}
 }
 @media (max-width:340px){.play-row{grid-template-columns:1fr}}
+
+/* ---------- Kid details + parent consent ---------- */
+.form-title{margin:18px 0 0;font-size:20px}
+.consent-box{background:#eef6f1;border:2px solid #cfe3d8;border-radius:14px;padding:14px 16px;margin:6px 0 16px}
+.consent-box>b{display:block;color:#315b5a;font-size:13px;letter-spacing:1px;text-transform:uppercase}
+.consent-box .field{margin:10px 0}
+.consent-check{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:#29464a;background:#fff;border-radius:10px;padding:10px 12px;cursor:pointer}
+.consent-check input{width:22px;height:22px;flex:none;margin-top:1px;accent-color:#59877d}
+.consent-note{display:block;margin-top:8px;color:#6e7775;font-size:12px}
+.pd-edit{display:block;margin:2px 0 0;padding:0;font-size:12px}
+.sw-day.future i{border-style:solid;border-color:#efe0cc;background:#f7ecdd;opacity:.6}
+.sw-day.future b{opacity:.55}
+.sw-day.today b{color:#29464a}
+.sw-day em{font-style:normal;font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#fff;background:#29464a;border-radius:99px;padding:1px 7px;margin-top:-2px}

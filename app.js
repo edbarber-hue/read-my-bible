@@ -133,6 +133,7 @@ function render() {
   if (!p) return;
   const n = todayChapter(p), little = p.age <= 6, q = QUESTIONS[n - 1], done = passedToday(p) && !catchUpOpen(p);
   $('#welcomeTitle').textContent = `Ready, ${firstName(p)}?`;
+  if (p.lastOpenSent !== todayKey() && p.consent?.yes) { p.lastOpenSent = todayKey(); save(); Sync.event(p, 'Opened the game'); }
 
   // Streak
   const s = testView.streak ?? streak(p);
@@ -142,8 +143,9 @@ function render() {
   const read = Math.min(28, p.completed.length); $('#bookText').textContent = `${read} / 28 chapters`; $('#bookBar').style.width = `${read / 28 * 100}%`;
   $('.streak-card').classList.toggle('lit', s > 0);
   $('#streakHeadline').textContent = s >= 14 ? 'Blazing! You’re unstoppable!' : s >= 7 ? 'You’re on fire!' : s >= 3 ? 'Your fire is getting bigger!' : s > 0 ? 'Your fire is lit!' : 'Light your fire!';
-  const wk = Array.from({ length: 7 }, (_, i) => addDays(todayKey(), i - 6));
-  $('#streakWeek').innerHTML = wk.map((d, i) => { const on = (p.dailyPass || {})[d] != null || (testView.streak != null && 6 - i < testView.streak); return `<span class="sw-day ${on ? 'on' : ''} ${i === 6 ? 'today' : ''}"><i>${on ? '🔥' : ''}</i><b>${i === 6 ? 'Today' : new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short' })}</b></span>`; }).join('');
+  const tk = todayKey(), dow = new Date(`${tk}T12:00:00`).getDay(), wk = Array.from({ length: 7 }, (_, i) => addDays(tk, i - dow));   // Sunday → Saturday of this week
+  const testOn = d => testView.streak != null && d <= tk && d > addDays(tk, -testView.streak);
+  $('#streakWeek').innerHTML = wk.map(d => { const on = (p.dailyPass || {})[d] != null || testOn(d), today = d === tk, future = d > tk; return `<span class="sw-day ${on ? 'on' : ''} ${today ? 'today' : ''} ${future ? 'future' : ''}"><i>${on ? '🔥' : ''}</i><b>${new Date(`${d}T12:00:00`).toLocaleDateString('en', { weekday: 'short' })}</b>${today ? '<em>Today</em>' : ''}</span>`; }).join('');
   const deep = Object.keys(p.reflections || {}).length; $('#deepBadge').textContent = deep ? `⭐ Deep Thinker × ${deep}` : ''; $('#deepBadge').classList.toggle('hidden', !deep);
   $('#streakText').textContent = s >= 28 ? '28-day champion! Keep the fire going!' : s === 0 ? 'Read today to light your fire!' : done ? `Day ${s} of 28 · see you tomorrow!` : `Day ${s} of 28 · read today to keep it going!`;
 
@@ -189,6 +191,7 @@ function showCongratulations() {
 // ---------- New-day welcome: Day N shakes, bursts, the fire grows, and it becomes Day N+1 (can't be skipped) ----------
 let welcomeBusy = false;
 function maybeWelcome(p) {
+  if (p && !welcomeBusy && p.lastWelcome === todayKey()) { maybeDetails(p); return; }
   if (!p || welcomeBusy || p.lastWelcome === todayKey() || !$('#gameLayer').classList.contains('hidden')) return;
   welcomeBusy = true;
   const days = Object.keys(p.dailyPass || {}).filter(d => d !== todayKey()).length, from = days, to = days + 1;
@@ -205,20 +208,68 @@ function maybeWelcome(p) {
     setTimeout(() => { el.classList.remove('shake'); el.classList.add('burst'); SkyAudio.sfx('ignite'); el.style.setProperty('--heat', Math.min(1, heat + 0.35)); $('#dwNum').textContent = to; }, 2200);
     setTimeout(() => { $('#dwMsg').innerHTML = first ? `It’s <b>Day 1</b>! Let’s read together!` : `It’s <b>Day ${to}</b>! Keep the fire burning!`; el.classList.add('glow'); }, 2600);
     setTimeout(() => { el.classList.add('out'); }, 4600);
-    setTimeout(() => { el.remove(); welcomeBusy = false; p.lastWelcome = todayKey(); save(); SkyAudio.scene('home'); window.__musicStarted = true; }, 5200);
+    setTimeout(() => { el.remove(); welcomeBusy = false; p.lastWelcome = todayKey(); save(); SkyAudio.scene('home'); window.__musicStarted = true; maybeDetails(p); }, 5200);
   };
 }
+
+
+// ---------- Kid details + parent consent (for the church's records) ----------
+const GRADES = ['Not in school yet', 'Nursery', 'Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Other'];
+const fullName = p => `${p.name || ''} ${p.lastName || ''}`.trim();
+const needsDetails = p => !p.lastName || !p.grade || !p.parentName || !p.consent;
+function detailsFields(p) {
+  const v = k => escapeHtml(p?.[k] || '');
+  return `<div class="two-col"><label class="field">Kid’s first name<input id="dFirst" maxlength="22" value="${escapeHtml(p?.name || '')}" placeholder="First name" autocomplete="off"></label><label class="field">Kid’s last name<input id="dLast" maxlength="30" value="${v('lastName')}" placeholder="Last name" autocomplete="off"></label></div>
+  <div class="two-col"><label class="field">Age<select id="dAge">${Array.from({ length: 9 }, (_, i) => `<option value="${i + 4}" ${(p?.age || 0) === i + 4 ? 'selected' : ''}>${i + 4} years old</option>`).join('')}</select></label><label class="field">Grade<select id="dGrade"><option value="">Choose…</option>${GRADES.map(g => `<option ${p?.grade === g ? 'selected' : ''}>${g}</option>`).join('')}</select></label></div>
+  ${p ? '' : `<fieldset class="gender-choice"><legend>Boy or girl?</legend><label><input type="radio" name="newGender" value="boy" checked> Boy</label><label><input type="radio" name="newGender" value="girl"> Girl</label><small>This can’t be changed later.</small></fieldset>`}
+  <div class="consent-box"><b>For a parent or guardian</b>
+  <div class="two-col"><label class="field">Parent’s full name<input id="dParent" maxlength="50" value="${v('parentName')}" placeholder="Your name" autocomplete="name"></label><label class="field">Mobile number or email<input id="dContact" maxlength="60" value="${v('parentContact')}" placeholder="0917… or name@email.com"></label></div>
+  <label class="consent-check"><input type="checkbox" id="dConsent" ${p?.consent?.yes ? 'checked' : ''}> I’m this child’s parent or guardian, and I agree that Favor Church may keep my child’s name, age, grade, reading progress, typed answers and voice recordings from this game. These help our Favor Kids team care for and pray for my child. They will not be shared outside the church, and I can ask for them to be deleted at any time.</label>
+  <small class="consent-note">Not ready to agree? Leave the box unticked. The game still works, and everything stays on this device only.</small></div>`;
+}
+function readDetails(isNew) {
+  const d = { firstName: $('#dFirst').value.trim(), lastName: $('#dLast').value.trim(), age: Number($('#dAge').value), grade: $('#dGrade').value, parentName: $('#dParent').value.trim(), parentContact: $('#dContact').value.trim(), consent: $('#dConsent').checked };
+  if (!d.firstName) { toast('Enter the kid’s first name'); return null; }
+  if (!d.lastName) { toast('Enter the kid’s last name'); return null; }
+  if (!d.grade) { toast('Choose a grade'); return null; }
+  if (!d.parentName) { toast('A parent or guardian needs to fill in their name'); return null; }
+  if (d.consent && !d.parentContact) { toast('Add a mobile number or email so we can reach you'); return null; }
+  return d;
+}
+function applyDetails(p, d) {
+  const was = p.consent?.yes;
+  p.name = d.firstName; p.lastName = d.lastName; p.age = d.age; p.grade = d.grade; p.parentName = d.parentName; p.parentContact = d.parentContact;
+  p.consent = { yes: d.consent, by: d.parentName, at: new Date().toISOString() };
+  if (d.consent && !was) Sync.event(p, 'Parent gave consent', { details: `By ${d.parentName}` });
+  else if (!d.consent && was) Sync.event(p, 'Parent removed consent', { details: `By ${d.parentName}`, force: true });
+  else if (d.consent) Sync.event(p, 'Details updated');
+}
+function showDetails(p, after) {
+  if (!p) return;
+  openModal(`${header('GROWN-UP HELP', `About ${escapeHtml(p.name)}`)}<p>Please ask a parent or guardian to fill this in. It helps our Favor Kids team know who is reading along, so we can cheer them on.</p>${detailsFields(p)}<button id="dSave" class="button primary wide">Save</button><button id="dLater" class="text-button" style="width:100%">Ask me later</button>`);
+  $('#dSave').onclick = () => { const d = readDetails(false); if (!d) return; applyDetails(p, d); save(); toast('Saved. Thank you!'); closeModal(); render(); after?.(); };
+  $('#dLater').onclick = () => { p.askedDetails = todayKey(); save(); closeModal(); after?.(); };
+}
+function maybeDetails(p) {
+  if (!p || !needsDetails(p) || p.askedDetails === todayKey() || isMaster()) return;
+  if (!$('#modalLayer').classList.contains('hidden') || !$('#gameLayer').classList.contains('hidden')) return;
+  p.askedDetails = todayKey(); save();   // ask once a day, even if the box is closed
+  showDetails(p);
+}
+function addJournal(p, entry) { p.journal = p.journal || []; p.journal.push(entry); save(); Sync.answer(p, entry); }
+Sync.progress = p => ({ chapters: (p.completed || []).length, currentChapter: todayChapter(p), streak: streak(p), home: ['Tent', 'Trailer', 'House', 'Mansion'][p.homeStage || 0] });
 
 // ---------- Profiles modal ----------
 function showProfiles() {
   const rows = state.profiles.map(p => `<div class="profile-row"><span class="profile-avatar ${p.gender === 'girl' ? 'girl' : 'boy'}"></span><div style="flex:1"><b>${escapeHtml(p.name)}</b><small>Age ${p.age} · ${p.completed?.length || 0}/28 chapters</small></div><button class="button small ${p.id === currentId ? 'dark' : 'secondary'}" data-select="${p.id}">${p.id === currentId ? 'Selected' : 'Choose'}</button></div>`).join('');
-  openModal(`${header('EXPLORERS', 'Choose your explorer')}<p>Each child has their own reading progress, rewards, and saved explorer on this device.</p><div class="profile-list">${rows || '<div class="notice">Create the first explorer to begin.</div>'}</div><div class="two-col"><label class="field">Explorer name<input id="newName" maxlength="22" placeholder="Name"></label><label class="field">Age<select id="newAge">${Array.from({ length: 9 }, (_, i) => `<option value="${i + 4}">${i + 4} years old</option>`).join('')}</select></label></div><fieldset class="gender-choice"><legend>Boy or girl?</legend><label><input type="radio" name="newGender" value="boy" checked> Boy</label><label><input type="radio" name="newGender" value="girl"> Girl</label><small>This can’t be changed later.</small></fieldset><button id="createProfile" class="button primary wide">Create explorer</button><button id="transferButton" class="text-button" style="width:100%">Move a save to another device →</button>`);
+  openModal(`${header('EXPLORERS', 'Choose your explorer')}<p>Each child has their own reading progress, rewards, and saved explorer on this device.</p><div class="profile-list">${rows || '<div class="notice">Create the first explorer to begin.</div>'}</div><h3 class="form-title">New explorer</h3>${detailsFields(null)}<button id="createProfile" class="button primary wide">Create explorer</button><button id="transferButton" class="text-button" style="width:100%">Move a save to another device →</button>`);
   $('#createProfile').onclick = () => {
-    const name = $('#newName').value.trim(), age = Number($('#newAge').value), gender = $('#modalCard input[name="newGender"]:checked')?.value || 'boy';
-    if (!name) { toast('Enter a name first'); return; }
-    if (state.profiles.some(p => p.name.toLowerCase() === name.toLowerCase())) { toast('That name is already in use here'); return; }
+    const d = readDetails(true); if (!d) return;
+    const name = d.firstName, age = d.age, gender = $('#modalCard input[name="newGender"]:checked')?.value || 'boy';
+    if (state.profiles.some(p => `${p.name} ${p.lastName || ''}`.trim().toLowerCase() === `${d.firstName} ${d.lastName}`.toLowerCase())) { toast('That explorer is already on this device'); return; }
     const p = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), name, age, gender, startDate: todayKey(), completed: [], dailyPass: {}, homeStage: 0, skin: 2, hair: 0, hairColor: 0, decor: {}, outdoorDecor: {}, cosmetics: { accessory: null, trail: null, jetpack: null, outfit: null }, best: 0, totalStars: 0, congratsShown: false, v2: 1 };
-    state.profiles.push(p); currentId = state.currentId = p.id; save(); closeModal(); render(); toast(`Welcome, ${name}!`);
+    applyDetails(p, d); p.lastWelcome = null;
+    state.profiles.push(p); currentId = state.currentId = p.id; save(); Sync.event(p, 'Signed up'); closeModal(); render(); toast(`Welcome, ${name}!`);
   };
   $('#transferButton').onclick = showTransfer;
   $('#modalCard').querySelectorAll('[data-select]').forEach(b => b.onclick = () => { currentId = state.currentId = b.dataset.select; save(); closeModal(); render(); });
@@ -233,7 +284,7 @@ function showTransfer() {
       const imp = JSON.parse(decodeURIComponent(escape(atob($('#importCode').value.trim()))));
       if (imp.exportVersion !== 1 || !imp.name || !Array.isArray(imp.completed) || imp.age < 4 || imp.age > 12) throw Error();
       delete imp.exportVersion;
-      imp.id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+      if (!imp.id || state.profiles.some(p => p.id === imp.id)) imp.id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());   // same id = same kid in the church records
       imp.name = String(imp.name).slice(0, 22);
       imp.completed = [...new Set(imp.completed.filter(n => Number.isInteger(n) && n >= 1 && n <= 28))];
       imp.dailyPass = imp.dailyPass && typeof imp.dailyPass === 'object' ? imp.dailyPass : {};   // keeps the streak when moving devices
@@ -382,6 +433,7 @@ function finishQuiz() {
   const n = quiz.chapter, isNew = !completed(p, n);
   if (isNew) p.completed.push(n); else if (rereading(p)) p.rereadCount = (p.rereadCount || 0) + 1;
   p.dailyPass[todayKey()] = n;
+  Sync.event(p, isNew ? 'Read a chapter' : 'Reread a chapter', { chapter: n });
   const reward = isNew ? COSMETICS.find(item => item.chapter === n) : null;
   const finished = p.completed.length === 28 && isNew;
   if (finished) p.congratsShown = true;
@@ -403,12 +455,12 @@ function showBonus(p, ch, done, inQuiz) {
     const pick = answers[Number(b.dataset.b)], best = pick === row[1]; SkyAudio.sfx(best ? 'bonus' : 'correct');
     $('#modalCard').querySelectorAll('[data-b]').forEach(x => { x.disabled = true; if (answers[Number(x.dataset.b)] === row[1]) x.classList.add('correct'); });
     if (best) { p.reflections = p.reflections || {}; p.reflections[ch] = true; save(); }
-    p.journal = p.journal || []; p.journal.push({ id: 'j' + Date.now(), date: todayKey(), ch, title: 'Bonus question', prompt: row[0], text: pick }); save();
+    addJournal(p, { id: 'j' + Date.now(), date: todayKey(), ch, title: 'Bonus question', prompt: row[0], text: pick });
     const typeBox = !little && r.bigType && best;
     $('#bonusAfter').innerHTML = `<p class="quiz-feedback">${best ? '⭐ Deep Thinker! Great answer.' : `Good thinking! Here’s a great answer: <b>${escapeHtml(row[1])}</b>.`}</p>${typeBox ? `<label class="field">${escapeHtml(r.bigType)}<input id="bonusNames" maxlength="80" placeholder="e.g. my cousin Sam, my friend Ana"></label>` : ''}<button id="bonusNext" class="button primary wide">${typeBox ? 'Done' : 'Continue'}</button>`;
     $('#bonusNext').onclick = () => {
       if (typeBox) {
-        const names = $('#bonusNames').value.trim(); if (names) { p.shareWith = names; p.journal.push({ id: 'j' + Date.now() + 'n', date: todayKey(), ch, title: 'Share Jesus', prompt: 'Who could you tell about Jesus? Name them!', text: names }); save(); }
+        const names = $('#bonusNames').value.trim(); if (names) { p.shareWith = names; addJournal(p, { id: 'j' + Date.now() + 'n', date: todayKey(), ch, title: 'Share Jesus', prompt: 'Who could you tell about Jesus? Name them!', text: names }); }
         $('#bonusAfter').innerHTML = `<div class="notice share-note">${escapeHtml(r.bigDone)}${names ? `<br><b>${escapeHtml(names)}</b>` : ''}</div><button id="bonusNext2" class="button primary wide">Continue</button>`;
         $('#bonusNext2').onclick = done; return;
       }
@@ -432,7 +484,7 @@ function showHeartMoment(p, ch, done, forced) {
     openModal(`${header(m.title === 'PRAY BREAK!' ? '🙏 PRAY BREAK!' : '💛 HEART MOMENT', m.title === 'PRAY BREAK!' ? 'Time to pray' : escapeHtml(m.title))}<p class="hm-prompt">${escapeHtml(m.kind === 'pray' ? (mode === 'record' ? 'Who do you want to pray for? Say their name and what you want to pray for them.' : 'Think of someone who needs prayer today.') : m.prompt)}</p>
       ${mode === 'record' ? recUI : typeUI}
       ${m.kind !== 'record' || mode === 'record' ? '' : ''}
-      <p class="fineprint">Your ${mode === 'record' ? 'message' : 'answer'} is saved for your parents to see on this device.</p>
+      <p class="fineprint">Your ${mode === 'record' ? 'message' : 'answer'} is saved for your parents${p.consent?.yes ? ' and the Favor Kids team' : ''} to see.</p>
       <button id="hmSave" class="button primary wide" ${mode === 'record' && !clip ? 'disabled' : ''}>Save</button>
       <div class="hm-links">${canRec ? `<button id="hmSwitch" class="text-button">${mode === 'record' ? '✏️ Type instead' : '🎤 Say it instead'}</button>` : ''}<button id="hmSkip" class="text-button">Skip for today</button></div>`);
     $('#hmSwitch')?.addEventListener('click', () => { Recorder.cancel(); clearInterval(timer); mode = mode === 'record' ? 'type' : 'record'; clip = null; draw(); });
@@ -450,7 +502,7 @@ function showHeartMoment(p, ch, done, forced) {
       const entry = { id: 'j' + Date.now(), date: todayKey(), ch, title: m.title, prompt: m.kind === 'pray' ? `${m.prompt} ${m.prompt2}` : m.prompt };
       if (mode === 'record') { if (!clip) return; try { await VoiceStore.put(entry.id, clip); entry.audio = true; } catch { toast('Could not save the recording on this device'); return; } }
       else { const A = $('#hmA').value.trim(), B = $('#hmB')?.value.trim() || ''; if (!A) { toast('Type your answer first'); return; } entry.text = A; if (B) entry.text2 = B; }
-      p.journal = p.journal || []; p.journal.push(entry); save(); SkyAudio.sfx('bonus');
+      addJournal(p, entry); SkyAudio.sfx('bonus');
       openModal(`${header('THANK YOU!', m.title === 'PRAY BREAK!' ? 'Let’s pray!' : 'Saved for your parents')}<p style="text-align:center;font-size:18px">${m.kind === 'pray' || m.title === 'PRAY BREAK!' ? 'Take a moment right now and pray for them. God hears you! 🙏' : m.prompt.startsWith('Who do you want to share') ? 'Great! Try to go to them this week and share with them about Jesus.' : 'Your parents will love this! 💛'}</p><button id="hmDone" class="button primary wide">Continue</button>`);
       $('#hmDone').onclick = done;
     };
@@ -471,7 +523,7 @@ function startHomeQuiz() {
   $('#beginHomeQuiz').onclick = () => startQuiz({ mode: 'review', chapters });
 }
 function finishHomeQuiz(p) {
-  p.homeStage = Math.min(3, p.homeStage + 1); p.homeInside = false; save(); render(); SkyAudio.jingle();
+  p.homeStage = Math.min(3, p.homeStage + 1); p.homeInside = false; save(); Sync.event(p, 'Home upgraded', { details: ['Tent', 'Trailer', 'House', 'Mansion'][p.homeStage] }); render(); SkyAudio.jingle();
   const name = HOME_NAMES[p.homeStage];
   openModal(`${header('NEW HOME', `Welcome to your ${name.toLowerCase()}!`)}<div class="home-reveal stage-${HOME_CLASSES[p.homeStage]}"></div><p style="text-align:center">You moved up from the ${HOME_NAMES[p.homeStage - 1].toLowerCase()}! New decorations are ready to place${CARS.length ? ', and a new car is parked outside' : ''}.</p><button id="homeDone" class="button primary wide">See my ${name.toLowerCase()}</button>`);
   $('#homeDone').onclick = () => { closeModal(); $('#homeBase').scrollIntoView({ behavior: 'smooth' }); };
@@ -595,7 +647,7 @@ function showParentDashboard(focusId) {
     const week = Array.from({ length: 7 }, (_, i) => addDays(todayKey(), i - 6)).map(d => `<span class="pd-day ${k.dailyPass[d] != null ? 'on' : ''}" title="${d}">${new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>`).join('');
     const talkCh = lastCh || (k.completed.length ? Math.max(...k.completed) : 1);
     return `<section class="pd-kid" id="pd-${k.id}">
-      <div class="pd-head"><span class="profile-avatar ${k.gender === 'girl' ? 'girl' : 'boy'}"></span><div><b>${escapeHtml(k.name)}</b><small>Age ${k.age} · ${k.age <= 6 ? 'reads one verse a day' : 'reads one chapter a day'}</small></div><span class="pd-streak">🔥 ${s} day${s === 1 ? '' : 's'} in a row</span></div>
+      <div class="pd-head"><span class="profile-avatar ${k.gender === 'girl' ? 'girl' : 'boy'}"></span><div><b>${escapeHtml(fullName(k))}</b><small>Age ${k.age}${k.grade ? ' · ' + escapeHtml(k.grade) : ''} · ${k.age <= 6 ? 'reads one verse a day' : 'reads one chapter a day'}</small><button class="text-button pd-edit" data-editkid="${k.id}">Edit details & consent</button></div><span class="pd-streak">🔥 ${s} day${s === 1 ? '' : 's'} in a row</span></div>
       <div class="pd-progress"><div class="book-progress-top"><span>Book of Matthew</span><b>${read} / 28 chapters</b></div><div class="book-track"><span style="width:${read / 28 * 100}%"></span></div></div>
       <p class="pd-last">Last read: <b>${niceDay(last)}${lastCh ? ` · Matthew ${lastCh}` : ''}</b></p>
       <div class="pd-week"><small>Days read this week</small><div>${week}</div></div>
@@ -608,6 +660,7 @@ function showParentDashboard(focusId) {
   }).join('');
   openModal(`${header('PARENTS', 'Parent dashboard')}<p>See how your kids are doing, hear what they shared, and use the questions to talk together. Ask, listen, and share what God is teaching you too!</p>${cards}<div class="pd-foot"><button id="pdChangePin" class="text-button">Change parent code</button><a class="text-button" href="qa.html" target="_blank" rel="noopener">All questions & answers →</a></div>`);
   $('#modalCard').querySelectorAll('[data-pdtab]').forEach(b => b.onclick = () => { const kid = b.dataset.kid; $('#modalCard').querySelectorAll(`[data-kid="${kid}"]`).forEach(x => x.classList.toggle('active', x === b)); ['said', 'talk'].forEach(t => $('#modalCard').querySelector(`[data-pane="${t}-${kid}"]`).classList.toggle('hidden', t !== b.dataset.pdtab)); });
+  $('#modalCard').querySelectorAll('[data-editkid]').forEach(b => b.onclick = () => showDetails(state.profiles.find(x => x.id === b.dataset.editkid), () => showParentDashboard(b.dataset.editkid)));
   $('#modalCard').querySelectorAll('[data-talk]').forEach(sel => sel.onchange = () => { $('#modalCard').querySelector(`[data-q="${sel.dataset.talk}"]`).innerHTML = talkHtml(Number(sel.value)); });
   $('#modalCard').querySelectorAll('[data-clip]').forEach(async el => { try { const b = await VoiceStore.get(el.dataset.clip); if (b) el.src = URL.createObjectURL(b); else el.replaceWith(Object.assign(document.createElement('small'), { textContent: '(recording not found on this device)' })); } catch { } });
   $('#modalCard').querySelectorAll('[data-deljournal]').forEach(b => b.onclick = () => { const [kid, id] = b.dataset.deljournal.split('|'), k = state.profiles.find(x => x.id === kid); if (!k || !confirmDelete(b)) return; k.journal = (k.journal || []).filter(e => e.id !== id); VoiceStore.del(id).catch(() => { }); save(); showParentDashboard(kid); });
