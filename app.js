@@ -217,23 +217,34 @@ function maybeWelcome(p) {
 
 
 // ---------- Kid details + parent consent (for the church's records) ----------
-const GRADES = ['Not in school yet', 'Nursery', 'Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Other'];
+const COUNTRIES = ['Philippines', 'South Korea', 'Australia', 'Other'];
+// School years are named differently in each country, so the grade list follows the country.
+const GRADES_BY = {
+  Philippines: ['Not in school yet', 'Nursery', 'Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7'],
+  'South Korea': ['Not in school yet', 'Kindergarten (유치원)', 'Grade 1 (초1)', 'Grade 2 (초2)', 'Grade 3 (초3)', 'Grade 4 (초4)', 'Grade 5 (초5)', 'Grade 6 (초6)', 'Middle school 1 (중1)'],
+  Australia: ['Not in school yet', 'Kindy / Pre-school', 'Prep / Foundation', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6', 'Year 7'],
+  Other: ['Not in school yet', 'Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7']
+};
+const gradeOptions = (country, cur) => `<option value="">Choose…</option>${(GRADES_BY[country] || GRADES_BY.Philippines).map(g => `<option ${cur === g ? 'selected' : ''}>${g}</option>`).join('')}${cur && !(GRADES_BY[country] || []).includes(cur) ? `<option selected>${escapeHtml(cur)}</option>` : ''}<option ${cur === 'Other' ? 'selected' : ''}>Other</option>`;
 const fullName = p => `${p.name || ''} ${p.lastName || ''}`.trim();
-const needsDetails = p => !p.lastName || !p.grade || !p.parentName || !p.consent;
+const needsDetails = p => !p.country || !p.lastName || !p.grade || !p.parentName || !p.consent;
 function detailsFields(p) {
   const v = k => escapeHtml(p?.[k] || '');
   return `<div class="two-col"><label class="field">Kid’s first name<input id="dFirst" maxlength="22" value="${escapeHtml(p?.name || '')}" placeholder="First name" autocomplete="off"></label><label class="field">Kid’s last name<input id="dLast" maxlength="30" value="${v('lastName')}" placeholder="Last name" autocomplete="off"></label></div>
-  <div class="two-col"><label class="field">Age<select id="dAge">${Array.from({ length: 9 }, (_, i) => `<option value="${i + 4}" ${(p?.age || 0) === i + 4 ? 'selected' : ''}>${i + 4} years old</option>`).join('')}</select></label><label class="field">Grade<select id="dGrade"><option value="">Choose…</option>${GRADES.map(g => `<option ${p?.grade === g ? 'selected' : ''}>${g}</option>`).join('')}</select></label></div>
+  <label class="field">What country do you live in?<div class="country-pick" id="dCountry">${COUNTRIES.map(c => `<label><input type="radio" name="dCountry" value="${c}" ${(p?.country || '') === c ? 'checked' : ''}><span>${{ Philippines: '🇵🇭', 'South Korea': '🇰🇷', Australia: '🇦🇺', Other: '🌏' }[c]} ${c}</span></label>`).join('')}</div></label>
+  <div class="two-col"><label class="field">Age<select id="dAge">${Array.from({ length: 9 }, (_, i) => `<option value="${i + 4}" ${(p?.age || 0) === i + 4 ? 'selected' : ''}>${i + 4} years old</option>`).join('')}</select></label><label class="field">Grade / year level<select id="dGrade">${gradeOptions(p?.country || 'Philippines', p?.grade)}</select></label></div>
   ${p ? '' : `<fieldset class="gender-choice"><legend>Boy or girl?</legend><label><input type="radio" name="newGender" value="boy" checked> Boy</label><label><input type="radio" name="newGender" value="girl"> Girl</label><small>This can’t be changed later.</small></fieldset>`}
   <div class="consent-box"><b>For a parent or guardian</b>
   <div class="two-col"><label class="field">Parent’s full name<input id="dParent" maxlength="50" value="${v('parentName')}" placeholder="Your name" autocomplete="name"></label><label class="field">Mobile number or email<input id="dContact" maxlength="60" value="${v('parentContact')}" placeholder="0917… or name@email.com"></label></div>
   <label class="consent-check"><input type="checkbox" id="dConsent" ${p?.consent?.yes ? 'checked' : ''}> I’m this child’s parent or guardian, and I agree that Favor Church may keep my child’s name, age, grade, reading progress, typed answers and voice recordings from this game. These help our Favor Kids team care for and pray for my child. They will not be shared outside the church, and I can ask for them to be deleted at any time.</label>
   <small class="consent-note">Not ready to agree? Leave the box unticked. The game still works, and everything stays on this device only.</small></div>`;
 }
+function wireCountry() { $('#modalCard').querySelectorAll('input[name="dCountry"]').forEach(r => r.onchange = () => { const g = $('#dGrade'); g.innerHTML = gradeOptions(r.value, ''); }); }
 function readDetails(isNew) {
-  const d = { firstName: $('#dFirst').value.trim(), lastName: $('#dLast').value.trim(), age: Number($('#dAge').value), grade: $('#dGrade').value, parentName: $('#dParent').value.trim(), parentContact: $('#dContact').value.trim(), consent: $('#dConsent').checked };
+  const d = { country: $('#modalCard input[name="dCountry"]:checked')?.value || '', firstName: $('#dFirst').value.trim(), lastName: $('#dLast').value.trim(), age: Number($('#dAge').value), grade: $('#dGrade').value, parentName: $('#dParent').value.trim(), parentContact: $('#dContact').value.trim(), consent: $('#dConsent').checked };
   if (!d.firstName) { toast('Enter the kid’s first name'); return null; }
   if (!d.lastName) { toast('Enter the kid’s last name'); return null; }
+  if (!d.country) { toast('Choose the country you live in'); return null; }
   if (!d.grade) { toast('Choose a grade'); return null; }
   if (!d.parentName) { toast('A parent or guardian needs to fill in their name'); return null; }
   if (d.consent && !d.parentContact) { toast('Add a mobile number or email so we can reach you'); return null; }
@@ -241,7 +252,7 @@ function readDetails(isNew) {
 }
 function applyDetails(p, d) {
   const was = p.consent?.yes;
-  p.name = d.firstName; p.lastName = d.lastName; p.age = d.age; p.grade = d.grade; p.parentName = d.parentName; p.parentContact = d.parentContact;
+  p.country = d.country; p.name = d.firstName; p.lastName = d.lastName; p.age = d.age; p.grade = d.grade; p.parentName = d.parentName; p.parentContact = d.parentContact;
   p.consent = { yes: d.consent, by: d.parentName, at: new Date().toISOString() };
   if (d.consent && !was) Sync.event(p, 'Parent gave consent', { details: `By ${d.parentName}` });
   else if (!d.consent && was) Sync.event(p, 'Parent removed consent', { details: `By ${d.parentName}`, force: true });
@@ -250,6 +261,7 @@ function applyDetails(p, d) {
 function showDetails(p, after) {
   if (!p) return;
   openModal(`${header('GROWN-UP HELP', `About ${escapeHtml(p.name)}`)}<p>Please ask a parent or guardian to fill this in. It helps our Favor Kids team know who is reading along, so we can cheer them on.</p>${detailsFields(p)}<button id="dSave" class="button primary wide">Save</button><button id="dLater" class="text-button" style="width:100%">Ask me later</button>`);
+  wireCountry();
   $('#dSave').onclick = () => { const d = readDetails(false); if (!d) return; applyDetails(p, d); save(); toast('Saved. Thank you!'); closeModal(); render(); after?.(); };
   $('#dLater').onclick = () => { p.askedDetails = todayKey(); save(); closeModal(); after?.(); };
 }
@@ -266,6 +278,7 @@ Sync.progress = p => ({ chapters: (p.completed || []).length, currentChapter: to
 function showProfiles() {
   const rows = state.profiles.map(p => `<div class="profile-row"><span class="profile-avatar ${p.gender === 'girl' ? 'girl' : 'boy'}"></span><div style="flex:1"><b>${escapeHtml(p.name)}</b><small>Age ${p.age} · ${p.completed?.length || 0}/28 chapters</small></div><button class="button small ${p.id === currentId ? 'dark' : 'secondary'}" data-select="${p.id}">${p.id === currentId ? 'Selected' : 'Choose'}</button></div>`).join('');
   openModal(`${header('EXPLORERS', 'Choose your explorer')}<p>Each child has their own reading progress, rewards, and saved explorer on this device.</p><div class="profile-list">${rows || '<div class="notice">Create the first explorer to begin.</div>'}</div><h3 class="form-title">New explorer</h3>${detailsFields(null)}<button id="createProfile" class="button primary wide">Create explorer</button><button id="transferButton" class="text-button" style="width:100%">Move a save to another device →</button>`);
+  wireCountry();
   $('#createProfile').onclick = () => {
     const d = readDetails(true); if (!d) return;
     const name = d.firstName, age = d.age, gender = $('#modalCard input[name="newGender"]:checked')?.value || 'boy';

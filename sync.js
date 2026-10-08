@@ -8,7 +8,7 @@ const Sync = (() => {
   const store = q => { try { localStorage.setItem(KEY, JSON.stringify(q.slice(-400))); } catch { } };
   let busy = false;
   const kid = p => ({
-    id: p.id, firstName: p.name || '', lastName: p.lastName || '', age: p.age, grade: p.grade || '', gender: p.gender,
+    id: p.id, country: p.country || '', firstName: p.name || '', lastName: p.lastName || '', age: p.age, grade: p.grade || '', gender: p.gender,
     parentName: p.parentName || '', parentContact: p.parentContact || '', consent: !!p.consent?.yes, consentAt: p.consent?.at || '',
     ...(api.progress ? safe(() => api.progress(p)) : {})
   });

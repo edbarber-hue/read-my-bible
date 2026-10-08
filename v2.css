@@ -379,3 +379,10 @@ body.playing{overflow:hidden}
   .game-frame{position:fixed;top:0;left:100vw;width:100vh;width:100dvh;height:100vw;transform:rotate(90deg);transform-origin:0 0;
     padding:env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) env(safe-area-inset-top)}
 }
+.country-pick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.country-pick label{cursor:pointer}
+.country-pick input{position:absolute;opacity:0}
+.country-pick span{display:block;text-align:center;border:2px solid #dbe1e0;border-radius:11px;background:#fff;padding:10px 6px;font-weight:800;font-size:13.5px;color:var(--navy)}
+.country-pick input:checked+span{border-color:#59877d;background:#e3f2ea;box-shadow:0 0 0 2px #59877d inset}
+.country-pick input:focus-visible+span{outline:3px solid #faa731}
+@media (max-width:520px){.country-pick{grid-template-columns:1fr 1fr}}
