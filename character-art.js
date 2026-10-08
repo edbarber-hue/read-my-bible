@@ -108,7 +108,7 @@ function characterSheet(gender,item,hair=0,skinIndex=2,hairColorIndex=0,accId=''
   const skin=typeof SKINS!=='undefined'?SKINS[skinIndex]||SKINS[2]:'#bd8058';
   const style=hairstylesFor(gender)[hair]||hairstylesFor(gender)[0];
   if(item?.type==='accessory'){accId=item.id;item=null;}
-  const root=window.CHARACTER_ROOT||'',color=style.bald?0:hairColorIndex,cover=gender==='boy'&&COVER_HATS.includes(accId);
+  const root=window.CHARACTER_ROOT||'',color=style.bald?0:hairColorIndex,cover=false;
   const stylePath=hairstylePath(gender,hair,color),SK=styleKey(gender,hair,color),plainPath=variantPath(gender,item,hair);
   const girlOutfit=gender==='girl'&&item?.type==='outfit';
   const bodyFromItem=item&&!girlOutfit;
