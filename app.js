@@ -384,7 +384,25 @@ function loadNet(reference) {
     document.head.append(script);
   });
 }
+// Bible versions kids can choose from. NET is the default (and has the recorded read-aloud voice).
+const BIBLES = {
+  NET: { short: 'NET', name: 'New English Translation', key: 'NET_MATTHEW', link: 'https://netbible.org' },
+  BBE: { short: 'Basic English', name: 'Bible in Basic English (public domain)', key: 'BBE_MATTHEW', file: 'bbe-matthew.js' },
+  WEB: { short: 'WEB', name: 'World English Bible (public domain)', key: 'WEB_MATTHEW', file: 'web-matthew.js' },
+  ERV: { short: 'Easy-to-Read (ERV)', name: 'Easy-to-Read Version', soon: true }
+};
+const bibleOf = p => (BIBLES[p?.bible] && !BIBLES[p.bible].soon) ? p.bible : 'NET';
+function loadBible(code) {
+  const b = BIBLES[code]; if (!b || window[b.key] || !b.file) return Promise.resolve();
+  return new Promise((ok, bad) => { const s = document.createElement('script'); s.src = b.file; s.onload = ok; s.onerror = bad; document.head.append(s); });
+}
 async function getPassage(n, p) {
+  const code = bibleOf(p);
+  if (code !== 'NET') {
+    await loadBible(code);
+    const verses = window[BIBLES[code].key]?.[n];
+    if (verses) return p.age <= 6 ? verses.filter(v => v[0] === QUESTIONS[n - 1].verse) : verses;
+  }
   // Bundled text first (works offline and doesn't depend on the NET website), then the NET service.
   if (window.NET_MATTHEW?.[n]) {
     const verses = window.NET_MATTHEW[n];
@@ -435,7 +453,8 @@ async function showReading(n) {
   if (!isMaster() && (n !== todayChapter(p) || (passedToday(p) && !catchUpOpen(p)))) { toast(passedToday(p) ? 'Come back tomorrow to read your Bible again!' : 'Read today’s chapter first'); return; }
   stopNarration(); readingChapter = n; passageText = ''; SkyAudio.scene('reading'); SkyAudio.sfx('page');
   const ref = netPassage(n, p);
-  openModal(`${header('READ YOUR BIBLE', escapeHtml(ref))}<p>${escapeHtml(QUESTIONS[n - 1].title)} · (<a href="https://netbible.org" target="_blank" rel="noopener">NET</a>)</p><div id="passageBox" class="passage-box">Loading…</div><div class="passage-actions"><button id="listenButton" class="button secondary" disabled>▶ Read aloud</button></div><div class="notice">Read to the end, then answer three questions. A grown-up can help younger readers.</div><button id="quizButton" class="button primary wide" disabled>Read to the end to start the quiz</button>${isMaster() ? '<button id="skipQuiz" class="button ghost wide test-button">Test mode: skip quiz and pass</button>' : ''}`);
+  openModal(`${header('READ YOUR BIBLE', escapeHtml(ref))}<div class="bible-row"><span>${escapeHtml(QUESTIONS[n - 1].title)}</span><label class="bible-pick">Bible <select id="bibleSelect" aria-label="Bible version">${Object.entries(BIBLES).map(([k, b]) => `<option value="${k}" ${b.soon ? 'disabled' : ''} ${k === bibleOf(p) ? 'selected' : ''}>${b.short}${b.soon ? ' · coming soon' : ''}</option>`).join('')}</select></label></div><div id="passageBox" class="passage-box">Loading…</div><div class="passage-actions"><button id="listenButton" class="button secondary" disabled>▶ Read aloud</button></div><div class="notice">Read to the end, then answer three questions. A grown-up can help younger readers.</div><button id="quizButton" class="button primary wide" disabled>Read to the end to start the quiz</button>${isMaster() ? '<button id="skipQuiz" class="button ghost wide test-button">Test mode: skip quiz and pass</button>' : ''}`);
+  $('#bibleSelect').onchange = e => { p.bible = e.target.value; save(); showReading(n); };
   $('#quizButton').onclick = () => startQuiz({ mode: 'daily', chapter: n });
   $('#skipQuiz')?.addEventListener('click', () => { quiz = { mode: 'daily', chapter: n, score: 3 }; finishQuiz(); });
   try {
@@ -447,7 +466,7 @@ async function showReading(n) {
     const enable = () => { const b = $('#quizButton'); if (b && b.disabled) { b.disabled = false; b.textContent = 'Start the 3-question quiz'; } };
     box.onscroll = () => { if (box.scrollTop + box.clientHeight >= box.scrollHeight - 25) enable(); };
     if (box.scrollHeight <= box.clientHeight + 8) enable();
-    const listen = $('#listenButton'), file = audioFor(n, p);
+    const listen = $('#listenButton'), file = bibleOf(p) === 'NET' ? audioFor(n, p) : null;
     listen.disabled = false;
     listen.onclick = () => { if (narration.active) { stopNarration(); return; } if (file) playAudioFile(file, listen); else playDeviceVoice(passageText, p.age, listen); };
   } catch {

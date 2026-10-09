@@ -426,3 +426,6 @@ body.playing{overflow:hidden}
 .privacy-box a{color:#2f6fe4}
 .privacy-addr{font-weight:600}
 .consent-check span{font-size:12.5px;line-height:1.45}.consent-check span b{font-size:14px}
+.bible-row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;margin:0 0 12px;color:var(--muted)}
+.bible-pick{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--ink)}
+.bible-pick select{border:2px solid #dbe1e0;border-radius:10px;padding:7px 10px;background:#fff;font:700 14px 'DM Sans',sans-serif;color:var(--navy)}
