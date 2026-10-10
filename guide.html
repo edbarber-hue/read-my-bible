@@ -35,6 +35,11 @@
   .three b{display:block;font-family:'Barlow Condensed',Impact,sans-serif;font-style:italic;font-weight:900;font-size:27px;line-height:.95;margin-bottom:4px}
   .b1{background:var(--blue);color:#fff}.b2{background:var(--yellow)}.b3{background:var(--orange)}
   .note{background:var(--soft);border-radius:12px;padding:10px 14px;font-size:14.5px;margin-top:10px}
+  .peek{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .peek figure{margin:0}
+  .peek .wide{grid-column:1/-1}
+  .peek img{display:block;width:100%;border-radius:12px;border:3px solid var(--ink)}
+  .peek figcaption{font-family:'Rubik Mono One',sans-serif;font-size:11px;color:var(--blue);margin-top:4px;text-align:center}
   .heart{background:var(--yellow);border-radius:16px;padding:14px 16px;margin-top:22px}
   .heart b{display:block;font-family:'Barlow Condensed',Impact,sans-serif;font-style:italic;font-weight:900;font-size:24px;text-transform:uppercase;line-height:1;margin-bottom:4px;color:var(--blue)}
   .steps{display:grid;gap:8px;margin:0;padding:0;list-style:none}
@@ -82,6 +87,11 @@
       <div class="b1"><b>READ</b>A short passage or the whole chapter.</div>
       <div class="b2"><b>ANSWER</b>3 quick questions to make sure they understood.</div>
       <div class="b3"><b>FLY</b>Play the Sky Run game!</div>
+    </div>
+    <div class="peek">
+      <figure><img src="guide/r-read.webp" alt="The reading screen showing Matthew 5"><figcaption>1 · Read</figcaption></figure>
+      <figure><img src="guide/r-quiz.webp" alt="A quiz question about Matthew 5"><figcaption>2 · Answer</figcaption></figure>
+      <figure class="wide"><img src="guide/r-game.webp" alt="The Sky Run game with the explorer flying past gems"><figcaption>3 · Fly in Sky Run!</figcaption></figure>
     </div>
     <p class="note">Every day they read, their <b>streak fire</b> grows, they unlock <b>new outfits</b>, and their <b>home</b> grows from a tent to a mansion. They can also send you a <b>voice message or prayer</b>.</p>
   </section>
